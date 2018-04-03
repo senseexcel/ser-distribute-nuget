@@ -114,7 +114,11 @@
             try
             {
                 //Copy Files
-                if (settings.Active == false)
+                var active = settings?.Active ?? true;
+                if (active == false)
+                    return;
+
+                if (active == false)
                     return;
 
                 var targetPath = settings.TargetPath.ToLowerInvariant().Trim();
@@ -148,7 +152,8 @@
             try
             {
                 //Upload to Hub
-                if (settings.Active == false)
+                var active = settings?.Active ?? true;
+                if (active == false)
                     return null;
 
                 var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
@@ -158,10 +163,16 @@
                 foreach (var path in paths)
                 {
                     var contentName = $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(path).TrimStart('.').ToUpperInvariant()})";
-                    var newPath = Path.Combine(Path.GetDirectoryName(path), reportName);
-                    if (!File.Exists(newPath))
-                        File.Move(path, newPath);
-                    if (settings.Mode == HubMode.OVERRIDE)
+                    var newPath = contentName;
+                    if (ondemandMode == true)
+                    {
+                        newPath = Path.Combine(Path.GetDirectoryName(path), reportName);
+                        if (!File.Exists(newPath))
+                            File.Move(path, newPath);
+                    }
+
+                    if (settings.Mode == DistributeMode.OVERRIDE || 
+                        settings.Mode == DistributeMode.CREATEONLY)
                     {
                         HubInfo hubInfo = null;
                         Guid? hubUserId = null;
@@ -199,25 +210,30 @@
                         }
                         else
                         {
-                            var updateRequest = new HubUpdateRequest()
+                            if (settings.Mode == DistributeMode.OVERRIDE)
                             {
-                                Info = sharedContent,
-                                Data = new ContentData()
+                                var updateRequest = new HubUpdateRequest()
                                 {
-                                    ContentType = $"application/{Path.GetExtension(newPath).Trim('.')}",
-                                    ExternalPath = Path.GetFileName(newPath),
-                                    FileData = File.ReadAllBytes(newPath),
-                                }
-                            };
+                                    Info = sharedContent,
+                                    Data = new ContentData()
+                                    {
+                                        ContentType = $"application/{Path.GetExtension(newPath).Trim('.')}",
+                                        ExternalPath = Path.GetFileName(newPath),
+                                        FileData = File.ReadAllBytes(newPath),
+                                    }
+                                };
 
-                            hubInfo = hub.UpdateSharedContentAsync(updateRequest).Result;
+                                hubInfo = hub.UpdateSharedContentAsync(updateRequest).Result;
+                            }
+                            else
+                            {
+                                //create only mode not over give old report back
+                                hubInfo = sharedContent;
+                            }
                         }
 
                         if (ondemandMode)
-                        {
-                            var refpath = hubInfo?.References?.FirstOrDefault()?.ExternalPath ?? null;
-                            OnDemandDownloadLink = $"{GetHost(settings.Connection, true, false)}{refpath}";
-                        }
+                            OnDemandDownloadLink = hubInfo?.References?.FirstOrDefault()?.ExternalPath ?? null;
 
                         if (hubUserId != null)
                         {
@@ -242,25 +258,28 @@
                             return hub.UpdateSharedContentAsync(changeRequest);
                         }
                     }
-                    else if (settings.Mode == HubMode.DELETE)
+                    else if (settings.Mode == DistributeMode.DELETEALLFIRST)
                     {
+                        var hubUser = new DomainUser(settings.HubUser);
                         var hubRequest = new HubSelectRequest()
                         {
                             Filter = HubSelectRequest.GetNameFilter(contentName),
                         };
-                        var sharedContent = hub.GetSharedContentAsync(hubRequest)?.Result?.FirstOrDefault() ?? null;
-                        if (sharedContent != null)
+                        var sharedContentInfos = hub.GetSharedContentAsync(hubRequest)?.Result;
+                        if (sharedContentInfos == null)
+                            return null;
+
+                        foreach (var sharedContent in sharedContentInfos)
                         {
-                            var deleteRequest = new HubDeleteRequest()
+                            if (sharedContent.Owner.UserId == hubUser.UserId &&
+                               sharedContent.Owner.UserDirectory == hubUser.UserDirectory)
                             {
-                                Id = sharedContent.Id.Value,
-                            };
-                            return hub.DeleteSharedContentAsync(deleteRequest);
+                                 hub.DeleteSharedContentAsync(new HubDeleteRequest() { Id = sharedContent.Id.Value }).Wait();
+                            }
                         }
-                    }
-                    else if (settings.Mode == HubMode.DELETEALL)
-                    {
-                        return hub.DeleteAllSharedContentAsync();
+
+                        settings.Mode = DistributeMode.CREATEONLY;
+                        UploadToHub(settings, paths, reportName, ondemandMode);
                     }
                     else
                     {

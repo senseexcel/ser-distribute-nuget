@@ -19,11 +19,11 @@
         HUB
     }
 
-    public enum HubMode
+    public enum DistributeMode
     {
         OVERRIDE,
-        DELETE,
-        DELETEALL
+        DELETEALLFIRST,
+        CREATEONLY
     }
     #endregion
 
@@ -35,10 +35,10 @@
     public class FileSettings : ISettings
     {
         #region Variables & Properties
-        public bool Active { get; set; }
+        public bool? Active { get; set; }
+        public SerConnection Connection { get; set; }
         public string TargetPath { get; set; }
         public bool Overwrite { get; set; } 
-        public SerConnection Connection { get; set; }
         public SettingsType Type { get; set; }
         #endregion
     }
@@ -46,10 +46,11 @@
     public class HubSettings : ISettings
     {
         #region Variables & Properties
-        public bool Active { get; set; }
-        public HubMode Mode { get; set; }
-        public string HubUser { get; set; }
+        public bool? Active { get; set; }
         public SerConnection Connection { get; set; }
+        public string TargetUri { get; set; }
+        public DistributeMode Mode { get; set; }
+        public string HubUser { get; set; }
         public SettingsType Type { get; set; }
         #endregion
     }
@@ -57,7 +58,7 @@
     public class MailSettings : ISettings
     {
         #region Variables & Properties
-        public bool Active { get; set; }
+        public bool? Active { get; set; }
         public string Subject { get; set; }
         public string Message { get; set; }
         public MailAddresses EMail { get; set; }

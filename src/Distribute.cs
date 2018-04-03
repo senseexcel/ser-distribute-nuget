@@ -99,7 +99,8 @@
                                     //cache mail infos
                                     logger.Info("Check - Cache Mail...");
                                     var mailSettings = GetSettings<MailSettings>(location);
-                                    if (mailSettings.Active)
+                                    var active = mailSettings?.Active ?? true;
+                                    if (active)
                                     {
                                         mailSettings.Paths = report.Paths;
                                         mailSettings.ReportName = report.Name;
