@@ -26,7 +26,13 @@
 
         #region Properties
         public string OnDemandDownloadLink { get; set; }
+        public List<string> DeletePaths { get; set; }
         #endregion
+
+        public ExecuteManager()
+        {
+            DeletePaths = new List<string>();
+        }
 
         #region Private Methods
         private string GetHost(SerConnection connection, bool withSheme = true, bool withProxy = true)
@@ -107,7 +113,26 @@
             return null;
         }
 
+        private bool SoftDelete(string folder)
+        {
+            try
+            {
+                Directory.Delete(folder, true);
+                logger.Debug($"work dir {folder} deleted.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.Warn(ex, $"The Folder {folder} could not deleted.");
+                return false;
+            }
+        }
         #endregion
+
+        public void CopyFiles()
+        {
+
+        }
 
         public void CopyFile(FileSettings settings, List<string> paths, string reportName)
         {
@@ -118,10 +143,13 @@
                 if (active == false)
                     return;
 
-                if (active == false)
+                var targetPath = settings.Target?.ToLowerInvariant()?.Trim() ?? null;
+                if(targetPath == null)
+                {
+                    logger.Error($"No target file path for report {reportName} found.");
                     return;
+                }
 
-                var targetPath = settings.TargetPath.ToLowerInvariant().Trim();
                 if (!targetPath.StartsWith("lib://"))
                 {
                     logger.Error($"Target value \"{targetPath}\" is not a lib:// folder.");
@@ -134,11 +162,32 @@
 
                 logger.Info($"Resolve target path: \"{targetPath}\".");
                 Directory.CreateDirectory(targetPath);
+
+                if (!DeletePaths.Contains(targetPath))
+                {
+                    SoftDelete(targetPath);
+                    DeletePaths.Add(targetPath);
+                }
+                    
                 foreach (var path in paths)
                 {
                     var targetFile = Path.Combine(targetPath, $"{reportName}");
-                    File.Copy(path, targetFile, settings.Overwrite);
-                    logger.Info($"file {targetFile} was copied");
+                    switch (settings.Mode)
+                    {
+                        case DistributeMode.OVERRIDE:
+                            File.Copy(path, targetFile, true);
+                            logger.Info($"file {targetFile} was copied");
+                            break;
+                        case DistributeMode.DELETEALLFIRST:
+                            File.Copy(path, targetFile, false);
+                            break;
+                        case DistributeMode.CREATEONLY:
+                            File.Copy(path, targetFile, false);
+                            break;
+                        default:
+                            logger.Error($"Unkown distribute mode {settings.Mode}");
+                            break;
+                    }
                 }
             }
             catch (Exception ex)
@@ -177,14 +226,14 @@
                         HubInfo hubInfo = null;
                         Guid? hubUserId = null;
                         DomainUser hubUser = null;
-                        if (settings.HubUser != null)
+                        if (settings.Owner != null)
                         {
-                            hubUser = new DomainUser(settings.HubUser);
+                            hubUser = new DomainUser(settings.Owner);
                             var userUri = new Uri($"{connectUri}/qrs/user");
                             var filter = $"userId eq '{hubUser.UserId}' and userDirectory eq '{hubUser.UserDirectory}'";
                             var result = hub.SendRequestAsync(userUri, HttpMethod.Get, null, filter).Result;
                             if (result == null)
-                                throw new Exception($"Qlik user {settings.HubUser} with qrs not found or session not connected.");
+                                throw new Exception($"Qlik user {settings.Owner} with qrs not found or session not connected.");
                             var userObject = JArray.Parse(result);
                             if (userObject.Count != 1)
                                 throw new Exception($"Too many User found. {result}");
@@ -260,7 +309,7 @@
                     }
                     else if (settings.Mode == DistributeMode.DELETEALLFIRST)
                     {
-                        var hubUser = new DomainUser(settings.HubUser);
+                        var hubUser = new DomainUser(settings.Owner);
                         var hubRequest = new HubSelectRequest()
                         {
                             Filter = HubSelectRequest.GetNameFilter(contentName),

@@ -14,7 +14,7 @@
     <PackageReference Include="NLog" Version="4.5.0" />
     <PackageReference Include="NLog.Schema" Version="4.5.0" />
     <PackageReference Include="Q2gHelperQrs" Version="1.0.8" />
-    <PackageReference Include="SerApi" Version="1.0.5" />
+    <PackageReference Include="SerApi" Version="1.0.7" />
     <PackageReference Include="WebSocket4Net" Version="0.15.2" />
   </ItemGroup>
 

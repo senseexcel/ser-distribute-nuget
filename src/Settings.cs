@@ -32,28 +32,28 @@
         SettingsType Type { get; set; }
     }
 
-    public class FileSettings : ISettings
+    public class BaseDeliverySettings : ISettings
     {
         #region Variables & Properties
         public bool? Active { get; set; }
         public SerConnection Connection { get; set; }
-        public string TargetPath { get; set; }
-        public bool Overwrite { get; set; } 
+        public string Target { get; set; }
+        public DistributeMode Mode { get; set; }
         public SettingsType Type { get; set; }
+        public string Owner { get; set; }
         #endregion
     }
 
-    public class HubSettings : ISettings
+    public class FileSettings : BaseDeliverySettings
     {
         #region Variables & Properties
-        public bool? Active { get; set; }
-        public SerConnection Connection { get; set; }
-        public string TargetUri { get; set; }
-        public DistributeMode Mode { get; set; }
-        public string HubUser { get; set; }
-        public SettingsType Type { get; set; }
+        // future      
+        public string Group;
+        public string ACL; 
         #endregion
     }
+
+    public class HubSettings : BaseDeliverySettings { }
 
     public class MailSettings : ISettings
     {
