@@ -16,6 +16,8 @@
     using Q2gHelperQrs;
     using System.Net.Mail;
     using System.Net.Http;
+    using System.Net.Security;
+    using System.Security.Cryptography.X509Certificates;
     #endregion
 
     public class ExecuteManager
@@ -26,7 +28,17 @@
 
         #region Properties
         public string OnDemandDownloadLink { get; set; }
+        public List<string> DeletePaths { get; set; }
+        private static SerConnection GlobalConnection;
+        private List<string> hubDeleteAll;
         #endregion
+
+        public ExecuteManager()
+        {
+            DeletePaths = new List<string>();
+            hubDeleteAll = new List<string>();
+            ServicePointManager.ServerCertificateValidationCallback += ValidateRemoteCertificate;
+        }
 
         #region Private Methods
         private string GetHost(SerConnection connection, bool withSheme = true, bool withProxy = true)
@@ -107,6 +119,57 @@
             return null;
         }
 
+        private bool SoftDelete(string folder)
+        {
+            try
+            {
+                Directory.Delete(folder, true);
+                logger.Debug($"work dir {folder} deleted.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.Warn(ex, $"The Folder {folder} could not deleted.");
+                return false;
+            }
+        }
+
+        private static bool ValidateRemoteCertificate(object sender, X509Certificate cert, X509Chain chain,
+                                                      SslPolicyErrors error)
+        {
+            if (error == SslPolicyErrors.None)
+                return true;
+
+            if (!GlobalConnection.SslVerify)
+                return true;
+
+            Uri requestUri = null;
+            if (sender is HttpRequestMessage hrm)
+                requestUri = hrm.RequestUri;
+            if (sender is HttpClient hc)
+                requestUri = hc.BaseAddress;
+            if (sender is HttpWebRequest hwr)
+                requestUri = hwr.Address;
+
+            if (requestUri != null)
+            {
+                var thumbprints = GlobalConnection.SslValidThumbprints;
+                foreach (var item in thumbprints)
+                {
+                    try
+                    {
+                        var uri = new Uri(item.Url);
+                        var thumbprint = item.Thumbprint.Replace(":", "").Replace(" ", "");
+                        if (thumbprint == cert.GetCertHashString() &&
+                           uri.Host.ToLowerInvariant() == requestUri.Host.ToLowerInvariant())
+                            return true;
+                    }
+                    catch { }
+                }
+            }
+
+            return false;
+        }
         #endregion
 
         public void CopyFile(FileSettings settings, List<string> paths, string reportName)
@@ -118,10 +181,14 @@
                 if (active == false)
                     return;
 
-                if (active == false)
+                GlobalConnection = settings.Connection;
+                var targetPath = settings.Target?.ToLowerInvariant()?.Trim() ?? null;
+                if(targetPath == null)
+                {
+                    logger.Error($"No target file path for report {reportName} found.");
                     return;
+                }
 
-                var targetPath = settings.TargetPath.ToLowerInvariant().Trim();
                 if (!targetPath.StartsWith("lib://"))
                 {
                     logger.Error($"Target value \"{targetPath}\" is not a lib:// folder.");
@@ -134,11 +201,32 @@
 
                 logger.Info($"Resolve target path: \"{targetPath}\".");
                 Directory.CreateDirectory(targetPath);
+
+                if (!DeletePaths.Contains(targetPath))
+                {
+                    SoftDelete(targetPath);
+                    DeletePaths.Add(targetPath);
+                }
+                    
                 foreach (var path in paths)
                 {
                     var targetFile = Path.Combine(targetPath, $"{reportName}");
-                    File.Copy(path, targetFile, settings.Overwrite);
-                    logger.Info($"file {targetFile} was copied");
+                    switch (settings.Mode)
+                    {
+                        case DistributeMode.OVERRIDE:
+                            File.Copy(path, targetFile, true);
+                            logger.Info($"file {targetFile} was copied");
+                            break;
+                        case DistributeMode.DELETEALLFIRST:
+                            File.Copy(path, targetFile, false);
+                            break;
+                        case DistributeMode.CREATEONLY:
+                            File.Copy(path, targetFile, false);
+                            break;
+                        default:
+                            logger.Error($"Unkown distribute mode {settings.Mode}");
+                            break;
+                    }
                 }
             }
             catch (Exception ex)
@@ -156,6 +244,7 @@
                 if (active == false)
                     return null;
 
+                GlobalConnection = settings.Connection;
                 var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                 var connectUri = new Uri(GetHost(settings.Connection));
                 var hub = new QlikQrsHub(connectUri, new Cookie(settings.Connection.Credentials.Key,
@@ -163,7 +252,7 @@
                 foreach (var path in paths)
                 {
                     var contentName = $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(path).TrimStart('.').ToUpperInvariant()})";
-                    var newPath = contentName;
+                    var newPath = path;
                     if (ondemandMode == true)
                     {
                         newPath = Path.Combine(Path.GetDirectoryName(path), reportName);
@@ -171,20 +260,23 @@
                             File.Move(path, newPath);
                     }
 
+                    if (hubDeleteAll.Contains(settings.Owner))
+                        settings.Mode = DistributeMode.CREATEONLY;
+
                     if (settings.Mode == DistributeMode.OVERRIDE || 
                         settings.Mode == DistributeMode.CREATEONLY)
                     {
                         HubInfo hubInfo = null;
                         Guid? hubUserId = null;
                         DomainUser hubUser = null;
-                        if (settings.HubUser != null)
+                        if (settings.Owner != null)
                         {
-                            hubUser = new DomainUser(settings.HubUser);
+                            hubUser = new DomainUser(settings.Owner);
                             var userUri = new Uri($"{connectUri}/qrs/user");
                             var filter = $"userId eq '{hubUser.UserId}' and userDirectory eq '{hubUser.UserDirectory}'";
                             var result = hub.SendRequestAsync(userUri, HttpMethod.Get, null, filter).Result;
                             if (result == null)
-                                throw new Exception($"Qlik user {settings.HubUser} with qrs not found or session not connected.");
+                                throw new Exception($"Qlik user {settings.Owner} with qrs not found or session not connected.");
                             var userObject = JArray.Parse(result);
                             if (userObject.Count != 1)
                                 throw new Exception($"Too many User found. {result}");
@@ -260,25 +352,26 @@
                     }
                     else if (settings.Mode == DistributeMode.DELETEALLFIRST)
                     {
-                        var hubUser = new DomainUser(settings.HubUser);
+                        var hubUser = new DomainUser(settings.Owner);
                         var hubRequest = new HubSelectRequest()
                         {
                             Filter = HubSelectRequest.GetNameFilter(contentName),
                         };
-                        var sharedContentInfos = hub.GetSharedContentAsync(hubRequest)?.Result;
+                        var sharedContentInfos = hub.GetSharedContentAsync(new HubSelectRequest())?.Result;
                         if (sharedContentInfos == null)
                             return null;
 
                         foreach (var sharedContent in sharedContentInfos)
                         {
-                            if (sharedContent.Owner.UserId == hubUser.UserId &&
-                               sharedContent.Owner.UserDirectory == hubUser.UserDirectory)
+                            if (sharedContent.Owner.UserId.ToLowerInvariant() == hubUser.UserId.ToLowerInvariant() &&
+                               sharedContent.Owner.UserDirectory.ToLowerInvariant() == hubUser.UserDirectory.ToLowerInvariant())
                             {
                                  hub.DeleteSharedContentAsync(new HubDeleteRequest() { Id = sharedContent.Id.Value }).Wait();
                             }
                         }
 
                         settings.Mode = DistributeMode.CREATEONLY;
+                        hubDeleteAll.Add(settings.Owner);
                         UploadToHub(settings, paths, reportName, ondemandMode);
                     }
                     else

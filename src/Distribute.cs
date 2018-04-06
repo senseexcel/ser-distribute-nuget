@@ -75,7 +75,7 @@
                     var uploadTasks = new List<Task>();
                     foreach (var report in result.Reports)
                     {
-                        var locations = report.Evaluate.Children();
+                        var locations = report?.Distribute?.Children().ToList() ?? new List<JToken>();
                         foreach (var location in locations)
                         {
                             var settings = GetSettings<FileSettings>(location, true);
@@ -114,7 +114,7 @@
                         }
                     }
 
-                    //wait for all upload tasks
+                    //Wait for all upload tasks
                     Task.WaitAll(uploadTasks.ToArray());
 
                     //Send Mail
