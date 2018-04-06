@@ -271,10 +271,9 @@
                         DomainUser hubUser = null;
                         if (settings.Owner != null)
                         {
-                            hubUser = new DomainUser(settings.Owner);
-                            var userUri = new Uri($"{connectUri}/qrs/user");
+                            hubUser = new DomainUser(settings.Owner);                            
                             var filter = $"userId eq '{hubUser.UserId}' and userDirectory eq '{hubUser.UserDirectory}'";
-                            var result = hub.SendRequestAsync(userUri, HttpMethod.Get, null, filter).Result;
+                            var result = hub.SendRequestAsync("user", HttpMethod.Get, null, filter).Result;
                             if (result == null)
                                 throw new Exception($"Qlik user {settings.Owner} with qrs not found or session not connected.");
                             var userObject = JArray.Parse(result);

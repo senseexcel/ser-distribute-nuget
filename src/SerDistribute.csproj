@@ -13,25 +13,28 @@
     <PackageReference Include="Microsoft.Extensions.PlatformAbstractions" Version="1.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
     <PackageReference Include="NLog" Version="4.5.1" />
-    <PackageReference Include="NLog.Schema" Version="4.5.1" />
-    <PackageReference Include="Q2gHelperQrs" Version="1.0.9" />
+    <PackageReference Include="NLog.Schema" Version="4.5.1" />    
     <PackageReference Include="SerApi" Version="1.0.8" />
     <PackageReference Include="WebSocket4Net" Version="0.15.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Properties\Resources.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
+    <Folder Include="Properties\" />
   </ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Update="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-  </ItemGroup>
+  <Choose>
+    <When Condition="'$(Configuration)' == 'Release'">
+      <ItemGroup>
+        <PackageReference Include="Q2gHelperQrs" Version="1.0.9" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <Reference Include="Q2gHelperQrs">
+          <HintPath>..\..\q2g-helper-qrs-nuget\src\bin\Debug\netcoreapp2.0\Q2gHelperQrs.dll</HintPath>
+        </Reference>
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
 
 </Project>
