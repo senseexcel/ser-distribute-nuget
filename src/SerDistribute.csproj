@@ -6,6 +6,7 @@
     <Authors>Konrad Mattheis und Martin Berthold</Authors>
     <Company>senseexcel</Company>
     <Copyright>Copyright (c) 2018</Copyright>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
