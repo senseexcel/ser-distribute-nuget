@@ -16,6 +16,8 @@
     using Q2gHelperQrs;
     using System.Net.Mail;
     using System.Net.Http;
+    using System.Net.Security;
+    using System.Security.Cryptography.X509Certificates;
     #endregion
 
     public class ExecuteManager
@@ -27,11 +29,15 @@
         #region Properties
         public string OnDemandDownloadLink { get; set; }
         public List<string> DeletePaths { get; set; }
+        private static SerConnection GlobalConnection;
+        private List<string> hubDeleteAll;
         #endregion
 
         public ExecuteManager()
         {
             DeletePaths = new List<string>();
+            hubDeleteAll = new List<string>();
+            ServicePointManager.ServerCertificateValidationCallback += ValidateRemoteCertificate;
         }
 
         #region Private Methods
@@ -127,12 +133,44 @@
                 return false;
             }
         }
-        #endregion
 
-        public void CopyFiles()
+        private static bool ValidateRemoteCertificate(object sender, X509Certificate cert, X509Chain chain,
+                                                      SslPolicyErrors error)
         {
+            if (error == SslPolicyErrors.None)
+                return true;
 
+            if (!GlobalConnection.SslVerify)
+                return true;
+
+            Uri requestUri = null;
+            if (sender is HttpRequestMessage hrm)
+                requestUri = hrm.RequestUri;
+            if (sender is HttpClient hc)
+                requestUri = hc.BaseAddress;
+            if (sender is HttpWebRequest hwr)
+                requestUri = hwr.Address;
+
+            if (requestUri != null)
+            {
+                var thumbprints = GlobalConnection.SslValidThumbprints;
+                foreach (var item in thumbprints)
+                {
+                    try
+                    {
+                        var uri = new Uri(item.Url);
+                        var thumbprint = item.Thumbprint.Replace(":", "").Replace(" ", "");
+                        if (thumbprint == cert.GetCertHashString() &&
+                           uri.Host.ToLowerInvariant() == requestUri.Host.ToLowerInvariant())
+                            return true;
+                    }
+                    catch { }
+                }
+            }
+
+            return false;
         }
+        #endregion
 
         public void CopyFile(FileSettings settings, List<string> paths, string reportName)
         {
@@ -143,6 +181,7 @@
                 if (active == false)
                     return;
 
+                GlobalConnection = settings.Connection;
                 var targetPath = settings.Target?.ToLowerInvariant()?.Trim() ?? null;
                 if(targetPath == null)
                 {
@@ -205,6 +244,7 @@
                 if (active == false)
                     return null;
 
+                GlobalConnection = settings.Connection;
                 var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                 var connectUri = new Uri(GetHost(settings.Connection));
                 var hub = new QlikQrsHub(connectUri, new Cookie(settings.Connection.Credentials.Key,
@@ -212,13 +252,16 @@
                 foreach (var path in paths)
                 {
                     var contentName = $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(path).TrimStart('.').ToUpperInvariant()})";
-                    var newPath = contentName;
+                    var newPath = path;
                     if (ondemandMode == true)
                     {
                         newPath = Path.Combine(Path.GetDirectoryName(path), reportName);
                         if (!File.Exists(newPath))
                             File.Move(path, newPath);
                     }
+
+                    if (hubDeleteAll.Contains(settings.Owner))
+                        settings.Mode = DistributeMode.CREATEONLY;
 
                     if (settings.Mode == DistributeMode.OVERRIDE || 
                         settings.Mode == DistributeMode.CREATEONLY)
@@ -314,20 +357,21 @@
                         {
                             Filter = HubSelectRequest.GetNameFilter(contentName),
                         };
-                        var sharedContentInfos = hub.GetSharedContentAsync(hubRequest)?.Result;
+                        var sharedContentInfos = hub.GetSharedContentAsync(new HubSelectRequest())?.Result;
                         if (sharedContentInfos == null)
                             return null;
 
                         foreach (var sharedContent in sharedContentInfos)
                         {
-                            if (sharedContent.Owner.UserId == hubUser.UserId &&
-                               sharedContent.Owner.UserDirectory == hubUser.UserDirectory)
+                            if (sharedContent.Owner.UserId.ToLowerInvariant() == hubUser.UserId.ToLowerInvariant() &&
+                               sharedContent.Owner.UserDirectory.ToLowerInvariant() == hubUser.UserDirectory.ToLowerInvariant())
                             {
                                  hub.DeleteSharedContentAsync(new HubDeleteRequest() { Id = sharedContent.Id.Value }).Wait();
                             }
                         }
 
                         settings.Mode = DistributeMode.CREATEONLY;
+                        hubDeleteAll.Add(settings.Owner);
                         UploadToHub(settings, paths, reportName, ondemandMode);
                     }
                     else
