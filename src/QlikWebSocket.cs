@@ -20,11 +20,22 @@
         private bool isOpen;
         private bool isClose;
 
-        public QlikWebSocket(string host, Cookie cookie)
+        public QlikWebSocket(Uri serverUri, Cookie cookie)
         {
-            var url = $"ws://{host}/app/engineData";
+            var newUri = new UriBuilder(serverUri);
+            switch (newUri.Scheme.ToLowerInvariant())
+            {
+                case "http":
+                    newUri.Scheme = "ws";
+                    break;
+                case "https":
+                    newUri.Scheme = "wss";
+                    break;
+            }
+            newUri.Path = "/app/engineData";
+            var socketUri = newUri.Uri;
             var cookies = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>(cookie.Name, cookie.Value), };
-            websocket = new WebSocket(url, cookies: cookies, version: WebSocketVersion.Rfc6455);
+            websocket = new WebSocket(socketUri.AbsoluteUri, cookies: cookies, version: WebSocketVersion.Rfc6455);
             websocket.Opened += Websocket_Opened;
             websocket.Error += Websocket_Error;
             websocket.Closed += Websocket_Closed;

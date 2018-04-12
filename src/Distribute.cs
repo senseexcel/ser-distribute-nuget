@@ -4,7 +4,7 @@
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using NLog;
-    using SerApi;
+    using Ser.Api;
     using System;
     using System.Collections.Generic;
     using System.IO;
@@ -62,9 +62,9 @@
                     }
 
                     var json = File.ReadAllText(jsonPath);
-                    var result = JsonConvert.DeserializeObject<JobResult>(json,
-                                 new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.Auto });
-
+                    
+                    //Wichtig: TypeNameHandling = TypeNameHandling.Auto
+                    var result = JsonConvert.DeserializeObject<JobResult>(json);
                     if (result.Status != TaskStatusInfo.SUCCESS)
                     {
                         logger.Warn($"The result \"{result.Status}\" of the report {jsonPath} is not correct. The report is ignored.");

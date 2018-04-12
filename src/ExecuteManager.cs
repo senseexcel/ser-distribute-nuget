@@ -11,13 +11,13 @@
     using System.Reflection;
     using System.Text;
     using System.Threading.Tasks;
-    using SerApi;
     using System.Net;
     using Q2gHelperQrs;
     using System.Net.Mail;
     using System.Net.Http;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
+    using Ser.Api;
     #endregion
 
     public class ExecuteManager
@@ -41,29 +41,12 @@
         }
 
         #region Private Methods
-        private string GetHost(SerConnection connection, bool withSheme = true, bool withProxy = true)
-        {
-            var url = $"{connection.ConnectUri}";
-            if (withProxy == false)
-                return url;
-            if (!String.IsNullOrEmpty(connection.VirtualProxyPath))
-                url += $"/{connection.VirtualProxyPath}";
-
-            if (!withSheme)
-            {
-                var uri = new Uri(url);
-                return url.Replace($"{uri.Scheme.ToString()}://", "");
-            }
-
-            return url;
-        }
-
-        private List<JToken> GetConnections(string host, string appId, Cookie cookie)
+        private List<JToken> GetConnections(Uri serverUri, string appId, Cookie cookie)
         {
             try
             {
                 var results = new List<string>();
-                var qlikWebSocket = new QlikWebSocket(host, cookie);
+                var qlikWebSocket = new QlikWebSocket(serverUri, cookie);
                 var isOpen = qlikWebSocket.OpenSocket();
                 var response = qlikWebSocket.OpenDoc(appId);
                 var handle = response["result"]["qReturn"]["qHandle"].ToString();
@@ -81,9 +64,8 @@
         {
             var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             var cookie = new Cookie(settings.Credentials.Key, settings.Credentials.Value);
-            var connectUri = GetHost(settings, false);
             var libUri = new Uri(path);
-            var connections = GetConnections(connectUri, settings.App, cookie);
+            var connections = GetConnections(settings.ServerUri, settings.App, cookie);
             if (connections != null)
             {
                 var libResult = connections.FirstOrDefault(n => n["qName"].ToString().ToLowerInvariant() == libUri.Host);
@@ -246,9 +228,8 @@
 
                 GlobalConnection = settings.Connection;
                 var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                var connectUri = new Uri(GetHost(settings.Connection));
-                var hub = new QlikQrsHub(connectUri, new Cookie(settings.Connection.Credentials.Key,
-                                                                settings.Connection.Credentials.Value));
+                var hub = new QlikQrsHub(settings.Connection.ServerUri, new Cookie(settings.Connection.Credentials.Key,
+                                                                                   settings.Connection.Credentials.Value));
                 foreach (var path in paths)
                 {
                     var contentName = $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(path).TrimStart('.').ToUpperInvariant()})";

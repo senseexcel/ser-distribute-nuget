@@ -6,7 +6,7 @@
     using Newtonsoft.Json.Linq;
     using NLog;
     using NLog.Config;
-    using SerApi;
+    using Ser.Api;
     using System;
     using System.Collections.Generic;
     using System.IO;
