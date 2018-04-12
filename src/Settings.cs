@@ -2,6 +2,7 @@
 {
     #region Usings
     using Newtonsoft.Json;
+    using Newtonsoft.Json.Serialization;
     using NLog;
     using Ser.Api;
     using System;
@@ -32,6 +33,8 @@
         SettingsType Type { get; set; }
     }
 
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,
+                NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class BaseDeliverySettings : ISettings
     {
         #region Variables & Properties

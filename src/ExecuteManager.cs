@@ -91,8 +91,7 @@
 
             foreach (var sharedContent in sharedContentInfos)
             {
-                if(sharedContent.Owner.UserId == hubUser.UserId && 
-                   sharedContent.Owner.UserDirectory == hubUser.UserDirectory)
+                if(sharedContent.Owner.ToString() == hubUser.ToString())
                 {
                     return sharedContent;
                 }
@@ -343,11 +342,8 @@
 
                         foreach (var sharedContent in sharedContentInfos)
                         {
-                            if (sharedContent.Owner.UserId.ToLowerInvariant() == hubUser.UserId.ToLowerInvariant() &&
-                               sharedContent.Owner.UserDirectory.ToLowerInvariant() == hubUser.UserDirectory.ToLowerInvariant())
-                            {
+                            if (sharedContent.Owner.ToString() == hubUser.ToString())
                                  hub.DeleteSharedContentAsync(new HubDeleteRequest() { Id = sharedContent.Id.Value }).Wait();
-                            }
                         }
 
                         settings.Mode = DistributeMode.CREATEONLY;
