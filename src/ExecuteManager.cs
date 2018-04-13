@@ -31,12 +31,14 @@
         public List<string> DeletePaths { get; set; }
         private static SerConnection GlobalConnection;
         private List<string> hubDeleteAll;
+        private Dictionary<string, string> pathMapper { get; set; }
         #endregion
 
         public ExecuteManager()
         {
             DeletePaths = new List<string>();
             hubDeleteAll = new List<string>();
+            pathMapper = new Dictionary<string, string>();
             ServicePointManager.ServerCertificateValidationCallback += ValidateRemoteCertificate;
         }
 
@@ -156,29 +158,31 @@
         public void CopyFile(FileSettings settings, List<string> paths, string reportName)
         {
             try
-            {
-                //Copy Files
-                var active = settings?.Active ?? true;
-                if (active == false)
-                    return;
-
+            {       
                 GlobalConnection = settings.Connection;
-                var targetPath = settings.Target?.ToLowerInvariant()?.Trim() ?? null;
-                if(targetPath == null)
+                var target = settings.Target?.ToLowerInvariant()?.Trim() ?? null;
+                if(target == null)
                 {
                     logger.Error($"No target file path for report {reportName} found.");
                     return;
                 }
 
-                if (!targetPath.StartsWith("lib://"))
+                if (!target.StartsWith("lib://"))
                 {
-                    logger.Error($"Target value \"{targetPath}\" is not a lib:// folder.");
+                    logger.Error($"Target value \"{target}\" is not a lib:// folder.");
                     return;
                 }
 
-                targetPath = NormalizeLibPath(targetPath, settings.Connection);
-                if (targetPath == null)
-                    throw new Exception("The could not resolved.");
+                string targetPath = String.Empty;
+                if (pathMapper.ContainsKey(target))
+                    targetPath = pathMapper[target];
+                else
+                {
+                    targetPath = NormalizeLibPath(target, settings.Connection);
+                    if (targetPath == null)
+                        throw new Exception("The could not resolved.");
+                    pathMapper.Add(target, targetPath);
+                }
 
                 logger.Info($"Resolve target path: \"{targetPath}\".");
                 if (!DeletePaths.Contains(targetPath))
@@ -218,12 +222,7 @@
         public Task UploadToHub(HubSettings settings, List<string> paths, string reportName, bool ondemandMode)
         {
             try
-            {
-                //Upload to Hub
-                var active = settings?.Active ?? true;
-                if (active == false)
-                    return null;
-
+            {               
                 GlobalConnection = settings.Connection;
                 var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                 var hub = new QlikQrsHub(settings.Connection.ServerUri, new Cookie(settings.Connection.Credentials.Key,
@@ -373,7 +372,7 @@
                 {
                     foreach (var path in mailSettings.Paths)
                     {
-                        var result = mailList.SingleOrDefault(m => m.MailInfo.ToString() == mailSettings.ToString());
+                        var result = mailList.SingleOrDefault(m => m.Settings.ToString() == mailSettings.ToString());
                         if (result == null)
                         {
                             var mailReport = new EMailReport(mailSettings, mailSettings.MailServer, mailSettings.ToString());
@@ -430,7 +429,8 @@
                     {
                         Credentials = new NetworkCredential(report.ServerSettings.Username, report.ServerSettings.Password),
                     };
-                    client.Send(mailMessage);
+                    logger.Debug("send mail package...");
+                    //client.Send(mailMessage);
                 }
             }
             catch (Exception ex)
