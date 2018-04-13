@@ -63,8 +63,7 @@
                     }
 
                     var json = File.ReadAllText(jsonPath);
-                    
-                    //Wichtig: TypeNameHandling = TypeNameHandling.Auto
+
                     var result = JsonConvert.DeserializeObject<JobResult>(json);
                     if (result.Status != TaskStatusInfo.SUCCESS)
                     {
