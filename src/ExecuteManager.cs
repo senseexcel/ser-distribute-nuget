@@ -11,13 +11,13 @@
     using System.Reflection;
     using System.Text;
     using System.Threading.Tasks;
-    using SerApi;
     using System.Net;
-    using Q2gHelperQrs;
+    using Q2g.HelperQrs;
     using System.Net.Mail;
     using System.Net.Http;
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
+    using Ser.Api;
     #endregion
 
     public class ExecuteManager
@@ -31,39 +31,24 @@
         public List<string> DeletePaths { get; set; }
         private static SerConnection GlobalConnection;
         private List<string> hubDeleteAll;
+        private Dictionary<string, string> pathMapper { get; set; }
         #endregion
 
         public ExecuteManager()
         {
             DeletePaths = new List<string>();
             hubDeleteAll = new List<string>();
+            pathMapper = new Dictionary<string, string>();
             ServicePointManager.ServerCertificateValidationCallback += ValidateRemoteCertificate;
         }
 
         #region Private Methods
-        private string GetHost(SerConnection connection, bool withSheme = true, bool withProxy = true)
-        {
-            var url = $"{connection.ConnectUri}";
-            if (withProxy == false)
-                return url;
-            if (!String.IsNullOrEmpty(connection.VirtualProxyPath))
-                url += $"/{connection.VirtualProxyPath}";
-
-            if (!withSheme)
-            {
-                var uri = new Uri(url);
-                return url.Replace($"{uri.Scheme.ToString()}://", "");
-            }
-
-            return url;
-        }
-
-        private List<JToken> GetConnections(string host, string appId, Cookie cookie)
+        private List<JToken> GetConnections(Uri serverUri, string appId, Cookie cookie)
         {
             try
             {
                 var results = new List<string>();
-                var qlikWebSocket = new QlikWebSocket(host, cookie);
+                var qlikWebSocket = new QlikWebSocket(serverUri, cookie);
                 var isOpen = qlikWebSocket.OpenSocket();
                 var response = qlikWebSocket.OpenDoc(appId);
                 var handle = response["result"]["qReturn"]["qHandle"].ToString();
@@ -81,9 +66,8 @@
         {
             var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             var cookie = new Cookie(settings.Credentials.Key, settings.Credentials.Value);
-            var connectUri = GetHost(settings, false);
             var libUri = new Uri(path);
-            var connections = GetConnections(connectUri, settings.App, cookie);
+            var connections = GetConnections(settings.ServerUri, settings.App, cookie);
             if (connections != null)
             {
                 var libResult = connections.FirstOrDefault(n => n["qName"].ToString().ToLowerInvariant() == libUri.Host);
@@ -109,8 +93,7 @@
 
             foreach (var sharedContent in sharedContentInfos)
             {
-                if(sharedContent.Owner.UserId == hubUser.UserId && 
-                   sharedContent.Owner.UserDirectory == hubUser.UserDirectory)
+                if(sharedContent.Owner.ToString() == hubUser.ToString())
                 {
                     return sharedContent;
                 }
@@ -175,39 +158,40 @@
         public void CopyFile(FileSettings settings, List<string> paths, string reportName)
         {
             try
-            {
-                //Copy Files
-                var active = settings?.Active ?? true;
-                if (active == false)
-                    return;
-
+            {       
                 GlobalConnection = settings.Connection;
-                var targetPath = settings.Target?.ToLowerInvariant()?.Trim() ?? null;
-                if(targetPath == null)
+                var target = settings.Target?.ToLowerInvariant()?.Trim() ?? null;
+                if(target == null)
                 {
                     logger.Error($"No target file path for report {reportName} found.");
                     return;
                 }
 
-                if (!targetPath.StartsWith("lib://"))
+                if (!target.StartsWith("lib://"))
                 {
-                    logger.Error($"Target value \"{targetPath}\" is not a lib:// folder.");
+                    logger.Error($"Target value \"{target}\" is not a lib:// folder.");
                     return;
                 }
 
-                targetPath = NormalizeLibPath(targetPath, settings.Connection);
-                if (targetPath == null)
-                    throw new Exception("The could not resolved.");
+                string targetPath = String.Empty;
+                if (pathMapper.ContainsKey(target))
+                    targetPath = pathMapper[target];
+                else
+                {
+                    targetPath = NormalizeLibPath(target, settings.Connection);
+                    if (targetPath == null)
+                        throw new Exception("The could not resolved.");
+                    pathMapper.Add(target, targetPath);
+                }
 
                 logger.Info($"Resolve target path: \"{targetPath}\".");
-                Directory.CreateDirectory(targetPath);
-
                 if (!DeletePaths.Contains(targetPath))
                 {
                     SoftDelete(targetPath);
                     DeletePaths.Add(targetPath);
                 }
-                    
+                Directory.CreateDirectory(targetPath);
+
                 foreach (var path in paths)
                 {
                     var targetFile = Path.Combine(targetPath, $"{reportName}");
@@ -238,17 +222,11 @@
         public Task UploadToHub(HubSettings settings, List<string> paths, string reportName, bool ondemandMode)
         {
             try
-            {
-                //Upload to Hub
-                var active = settings?.Active ?? true;
-                if (active == false)
-                    return null;
-
+            {               
                 GlobalConnection = settings.Connection;
                 var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                var connectUri = new Uri(GetHost(settings.Connection));
-                var hub = new QlikQrsHub(connectUri, new Cookie(settings.Connection.Credentials.Key,
-                                                                settings.Connection.Credentials.Value));
+                var hub = new QlikQrsHub(settings.Connection.ServerUri, new Cookie(settings.Connection.Credentials.Key,
+                                                                                   settings.Connection.Credentials.Value));
                 foreach (var path in paths)
                 {
                     var contentName = $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(path).TrimStart('.').ToUpperInvariant()})";
@@ -362,11 +340,8 @@
 
                         foreach (var sharedContent in sharedContentInfos)
                         {
-                            if (sharedContent.Owner.UserId.ToLowerInvariant() == hubUser.UserId.ToLowerInvariant() &&
-                               sharedContent.Owner.UserDirectory.ToLowerInvariant() == hubUser.UserDirectory.ToLowerInvariant())
-                            {
+                            if (sharedContent.Owner.ToString() == hubUser.ToString())
                                  hub.DeleteSharedContentAsync(new HubDeleteRequest() { Id = sharedContent.Id.Value }).Wait();
-                            }
                         }
 
                         settings.Mode = DistributeMode.CREATEONLY;
@@ -397,7 +372,7 @@
                 {
                     foreach (var path in mailSettings.Paths)
                     {
-                        var result = mailList.SingleOrDefault(m => m.MailInfo.ToString() == mailSettings.ToString());
+                        var result = mailList.SingleOrDefault(m => m.Settings.ToString() == mailSettings.ToString());
                         if (result == null)
                         {
                             var mailReport = new EMailReport(mailSettings, mailSettings.MailServer, mailSettings.ToString());
@@ -454,7 +429,8 @@
                     {
                         Credentials = new NetworkCredential(report.ServerSettings.Username, report.ServerSettings.Password),
                     };
-                    client.Send(mailMessage);
+                    logger.Debug("send mail package...");
+                    //client.Send(mailMessage);
                 }
             }
             catch (Exception ex)

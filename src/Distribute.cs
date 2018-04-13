@@ -4,7 +4,7 @@
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using NLog;
-    using SerApi;
+    using Ser.Api;
     using System;
     using System.Collections.Generic;
     using System.IO;
@@ -25,15 +25,16 @@
             {
                 if (typeOnly)
                 {
+                    var active = json?.Children()["active"]?.ToList()?.FirstOrDefault()?.ToObject<bool>() ?? null;
                     var jProperty = json as JProperty;
                     switch (jProperty?.Name)
                     {
                         case "mail":
-                            return new T() { Type = SettingsType.MAIL };
+                            return new T() { Type = SettingsType.MAIL, Active = active };
                         case "hub":
-                            return new T() { Type = SettingsType.HUB };
+                            return new T() { Type = SettingsType.HUB, Active = active };
                         case "file":
-                            return new T() { Type = SettingsType.FILE };
+                            return new T() { Type = SettingsType.FILE, Active = active };
                     }
                 }
 
@@ -62,9 +63,8 @@
                     }
 
                     var json = File.ReadAllText(jsonPath);
-                    var result = JsonConvert.DeserializeObject<JobResult>(json,
-                                 new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.Auto });
 
+                    var result = JsonConvert.DeserializeObject<JobResult>(json);
                     if (result.Status != TaskStatusInfo.SUCCESS)
                     {
                         logger.Warn($"The result \"{result.Status}\" of the report {jsonPath} is not correct. The report is ignored.");
@@ -78,38 +78,37 @@
                         var locations = report?.Distribute?.Children().ToList() ?? new List<JToken>();
                         foreach (var location in locations)
                         {
-                            var settings = GetSettings<FileSettings>(location, true);
-                            switch (settings.Type)
+                            var settings = GetSettings<BaseDeliverySettings>(location, true);
+                            if (settings.Active ?? true)
                             {
-                                case SettingsType.FILE:
-                                    //copy reports
-                                    logger.Info("Check - Copy Files...");
-                                    var fileSettings = GetSettings<FileSettings>(location);
-                                    execute.CopyFile(fileSettings, report.Paths, report.Name);
-                                    break;
-                                case SettingsType.HUB:
-                                    //upload to hub
-                                    logger.Info("Check - Upload to hub...");
-                                    var hubSettings = GetSettings<HubSettings>(location);
-                                    var task = execute.UploadToHub(hubSettings, report.Paths, report.Name, onDemand);
-                                    if (task != null)
-                                        uploadTasks.Add(task);
-                                    break;
-                                case SettingsType.MAIL:
-                                    //cache mail infos
-                                    logger.Info("Check - Cache Mail...");
-                                    var mailSettings = GetSettings<MailSettings>(location);
-                                    var active = mailSettings?.Active ?? true;
-                                    if (active)
-                                    {
+                                switch (settings.Type)
+                                {
+                                    case SettingsType.FILE:
+                                        //copy reports
+                                        logger.Info("Check - Copy Files...");
+                                        var fileSettings = GetSettings<FileSettings>(location);
+                                        execute.CopyFile(fileSettings, report.Paths, report.Name);
+                                        break;
+                                    case SettingsType.HUB:
+                                        //upload to hub
+                                        logger.Info("Check - Upload to hub...");
+                                        var hubSettings = GetSettings<HubSettings>(location);
+                                        var task = execute.UploadToHub(hubSettings, report.Paths, report.Name, onDemand);
+                                        if (task != null)
+                                            uploadTasks.Add(task);
+                                        break;
+                                    case SettingsType.MAIL:
+                                        //cache mail infos
+                                        logger.Info("Check - Cache Mail...");
+                                        var mailSettings = GetSettings<MailSettings>(location);
                                         mailSettings.Paths = report.Paths;
                                         mailSettings.ReportName = report.Name;
                                         mailList.Add(mailSettings);
-                                    }
-                                    break;
-                                default:
-                                    logger.Warn($"The delivery type of json {location} is unknown.");
-                                    break;
+                                        break;
+                                    default:
+                                        logger.Warn($"The delivery type of json {location} is unknown.");
+                                        break;
+                                }
                             }
                         }
                     }
