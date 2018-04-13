@@ -1,4 +1,4 @@
-﻿namespace SerDistribute
+﻿namespace Ser.Distribute
 {
     #region Usings
     using Newtonsoft.Json;
@@ -23,7 +23,7 @@
         public QlikWebSocket(Uri serverUri, Cookie cookie)
         {
             var newUri = new UriBuilder(serverUri);
-            switch (newUri.Scheme.ToLowerInvariant())
+            switch (newUri?.Scheme?.ToLowerInvariant())
             {
                 case "http":
                     newUri.Scheme = "ws";
@@ -31,6 +31,11 @@
                 case "https":
                     newUri.Scheme = "wss";
                     break;
+                case "wss":
+                case "ws":
+                    break;
+                default:
+                    throw new Exception($"Unknown Scheme to connect to Websocket {newUri?.Scheme ?? "NULL"}");
             }
             newUri.Path = $"{newUri.Path}/app/engineData";
             var cookies = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>(cookie.Name, cookie.Value), };
@@ -41,6 +46,7 @@
             websocket.MessageReceived += Websocket_MessageReceived;
             websocket.AutoSendPingInterval = 100;
             websocket.EnableAutoSendPing = true;
+            // ToDo: remove SSL BigShit in WebSocket4Net
             websocket.Security.AllowCertificateChainErrors = true;
             websocket.Security.AllowUnstrustedCertificate = true;
             websocket.Security.AllowNameMismatchCertificate = true;

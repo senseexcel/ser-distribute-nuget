@@ -1,4 +1,4 @@
-﻿namespace SerDistribute
+﻿namespace Ser.Distribute
 {
     #region Usings
     using System.Collections.Generic;
