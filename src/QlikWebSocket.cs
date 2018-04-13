@@ -32,18 +32,18 @@
                     newUri.Scheme = "wss";
                     break;
             }
-            newUri.Path = "/app/engineData";
-            var socketUri = newUri.Uri;
+            newUri.Path = $"{newUri.Path}/app/engineData";
             var cookies = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>(cookie.Name, cookie.Value), };
-            websocket = new WebSocket(socketUri.AbsoluteUri, cookies: cookies, version: WebSocketVersion.Rfc6455);
+            websocket = new WebSocket(newUri.Uri.AbsoluteUri, cookies: cookies, version: WebSocketVersion.Rfc6455);
             websocket.Opened += Websocket_Opened;
             websocket.Error += Websocket_Error;
             websocket.Closed += Websocket_Closed;
             websocket.MessageReceived += Websocket_MessageReceived;
             websocket.AutoSendPingInterval = 100;
             websocket.EnableAutoSendPing = true;
-            //websocket.Security.AllowCertificateChainErrors = true;
-            //websocket.Security.EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls11 | System.Security.Authentication.SslProtocols.Tls;
+            websocket.Security.AllowCertificateChainErrors = true;
+            websocket.Security.AllowUnstrustedCertificate = true;
+            websocket.Security.AllowNameMismatchCertificate = true;
         }
 
         private void Websocket_MessageReceived(object sender, MessageReceivedEventArgs e)

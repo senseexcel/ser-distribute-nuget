@@ -12,7 +12,7 @@
     using System.Text;
     using System.Threading.Tasks;
     using System.Net;
-    using Q2gHelperQrs;
+    using Q2g.HelperQrs;
     using System.Net.Mail;
     using System.Net.Http;
     using System.Net.Security;
@@ -181,14 +181,13 @@
                     throw new Exception("The could not resolved.");
 
                 logger.Info($"Resolve target path: \"{targetPath}\".");
-                Directory.CreateDirectory(targetPath);
-
                 if (!DeletePaths.Contains(targetPath))
                 {
                     SoftDelete(targetPath);
                     DeletePaths.Add(targetPath);
                 }
-                    
+                Directory.CreateDirectory(targetPath);
+
                 foreach (var path in paths)
                 {
                     var targetFile = Path.Combine(targetPath, $"{reportName}");
