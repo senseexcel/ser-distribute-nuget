@@ -188,12 +188,6 @@
                 }
 
                 logger.Info($"Resolve target path: \"{targetPath}\".");
-                if (!DeletePaths.Contains(targetPath))
-                {
-                    SoftDelete(targetPath);
-                    DeletePaths.Add(targetPath);
-                }
-                Directory.CreateDirectory(targetPath);
 
                 foreach (var path in paths)
                 {
@@ -205,6 +199,12 @@
                             logger.Info($"file {targetFile} was copied");
                             break;
                         case DistributeMode.DELETEALLFIRST:
+                            if (!DeletePaths.Contains(targetPath))
+                            {
+                                SoftDelete(targetPath);
+                                DeletePaths.Add(targetPath);
+                            }
+                            Directory.CreateDirectory(targetPath);
                             File.Copy(path, targetFile, false);
                             break;
                         case DistributeMode.CREATEONLY:
