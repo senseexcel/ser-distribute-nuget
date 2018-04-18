@@ -142,6 +142,12 @@
             return Send(msg);
         }
 
+        public JObject GetActiveDoc()
+        {
+            var msg = @"{'method':'GetActiveDoc','handle':-1,'params':{},'jsonrpc':'2.0'}";
+            return Send(msg);
+        }
+
         public JObject GetContentLibraries(string handle)
         {
             var msg = @"{'method':'GetContentLibraries','handle':" + handle + ",'params':{},'jsonrpc':'2.0'}";
