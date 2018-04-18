@@ -31,7 +31,7 @@
         public List<string> DeletePaths { get; set; }
         private static SerConnection GlobalConnection;
         private List<string> hubDeleteAll;
-        private Dictionary<string, string> pathMapper { get; set; }
+        private Dictionary<string, string> pathMapper;
         #endregion
 
         public ExecuteManager()
@@ -51,7 +51,10 @@
                 var qlikWebSocket = new QlikWebSocket(serverUri, cookie);
                 var isOpen = qlikWebSocket.OpenSocket();
                 var response = qlikWebSocket.OpenDoc(appId);
-                var handle = response["result"]["qReturn"]["qHandle"].ToString();
+                string handle = String.Empty;
+                if (response.ToString().Contains("App already open"))
+                    response = qlikWebSocket.GetActiveDoc();
+                handle = response["result"]["qReturn"]["qHandle"].ToString();
                 response = qlikWebSocket.GetConnections(handle);
                 return response["result"]["qConnections"].ToList();
             }

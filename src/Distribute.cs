@@ -63,7 +63,6 @@
                     }
 
                     var json = File.ReadAllText(jsonPath);
-
                     var result = JsonConvert.DeserializeObject<JobResult>(json);
                     if (result.Status != TaskStatusInfo.SUCCESS)
                     {
