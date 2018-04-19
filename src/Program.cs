@@ -26,6 +26,7 @@
             {
                 SetLoggerSettings("App.config");
                 logger.Info("SerDistribute running.");
+                logger.Info($"Version: {GitVersionInformation.InformationalVersion}");
 
                 if (args == null || args.Length == 0)
                 {

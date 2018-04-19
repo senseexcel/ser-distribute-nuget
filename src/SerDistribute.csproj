@@ -7,14 +7,17 @@
     <Company>senseexcel</Company>
     <Copyright>Copyright (c) 2018</Copyright>
     <Version>1.0.4</Version>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <RootNamespace>Ser.Distribute</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="GitVersionTask" Version="4.0.0-beta0008" />
     <PackageReference Include="Microsoft.Extensions.PlatformAbstractions" Version="1.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
     <PackageReference Include="NLog" Version="4.5.3" />
     <PackageReference Include="NLog.Schema" Version="4.5.3" />    
-    <PackageReference Include="SerApi" Version="2.0.7" />
+    <PackageReference Include="SerApi" Version="2.0.8" />
     <PackageReference Include="WebSocket4Net" Version="0.15.2" />
   </ItemGroup>
 
