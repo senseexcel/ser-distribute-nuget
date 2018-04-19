@@ -195,6 +195,7 @@
                     switch (settings.Mode)
                     {
                         case DistributeMode.OVERRIDE:
+                            Directory.CreateDirectory(targetPath);
                             File.Copy(path, targetFile, true);
                             logger.Info($"file {targetFile} was copied");
                             break;
@@ -433,7 +434,7 @@
                         Credentials = new NetworkCredential(report.ServerSettings.Username, report.ServerSettings.Password),
                     };
                     logger.Debug("send mail package...");
-                    //client.Send(mailMessage);
+                    client.Send(mailMessage);
                 }
             }
             catch (Exception ex)
