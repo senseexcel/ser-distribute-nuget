@@ -117,7 +117,8 @@
 
                     //Send Mail
                     logger.Info("Check - Send Mails...");
-                    execute.SendMails(mailList);
+                    if (mailList.Count > 0)
+                        execute.SendMails(mailList);
                 }
 
                 if (onDemand)
