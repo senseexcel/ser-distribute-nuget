@@ -115,7 +115,7 @@
                     //Wait for all upload tasks
                     Task.WaitAll(uploadTasks.ToArray());
 
-                    //Send Mail
+                    //Send Mail 
                     logger.Info("Check - Send Mails...");
                     if (mailList.Count > 0)
                         execute.SendMails(mailList);
