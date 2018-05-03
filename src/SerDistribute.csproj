@@ -26,6 +26,12 @@
     <Folder Include="Properties\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Q2gHelperPem">
+      <HintPath>..\..\q2g-helper-pem-nuget\src\bin\Release\netcoreapp2.0\Q2gHelperPem.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
   <Choose>
     <When Condition="'$(Configuration)' == 'Release'">
       <ItemGroup>

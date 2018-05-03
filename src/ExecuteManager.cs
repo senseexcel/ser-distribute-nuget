@@ -28,7 +28,6 @@
 
         #region Properties
         public string OnDemandDownloadLink { get; set; }
-        public List<string> DeletePaths { get; set; }
         private static SerConnection GlobalConnection;
         private List<string> hubDeleteAll;
         private Dictionary<string, string> pathMapper;
@@ -36,7 +35,6 @@
 
         public ExecuteManager()
         {
-            DeletePaths = new List<string>();
             hubDeleteAll = new List<string>();
             pathMapper = new Dictionary<string, string>();
             ServicePointManager.ServerCertificateValidationCallback += ValidateRemoteCertificate;
@@ -103,21 +101,6 @@
             }
 
             return null;
-        }
-
-        private bool SoftDelete(string folder)
-        {
-            try
-            {
-                Directory.Delete(folder, true);
-                logger.Debug($"work dir {folder} deleted.");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                logger.Warn(ex, $"The Folder {folder} could not deleted.");
-                return false;
-            }
         }
 
         private static bool ValidateRemoteCertificate(object sender, X509Certificate cert, X509Chain chain,
@@ -200,11 +183,7 @@
                             logger.Info($"file {targetFile} was copied");
                             break;
                         case DistributeMode.DELETEALLFIRST:
-                            if (!DeletePaths.Contains(targetPath))
-                            {
-                                SoftDelete(targetPath);
-                                DeletePaths.Add(targetPath);
-                            }
+                            File.Delete(targetFile);
                             Directory.CreateDirectory(targetPath);
                             File.Copy(path, targetFile, false);
                             break;
