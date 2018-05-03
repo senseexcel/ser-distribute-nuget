@@ -1,26 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <Authors>Konrad Mattheis und Martin Berthold</Authors>
     <Company>senseexcel</Company>
     <Copyright>Copyright (c) 2018</Copyright>
-    <Version>1.0.4</Version>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <RootNamespace>Ser.Distribute</RootNamespace>
+    <Version>$(GitVersion_NuGetVersion)</Version>
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="GitVersionTask" Version="4.0.0-beta0008" />
-    <PackageReference Include="Microsoft.Extensions.PlatformAbstractions" Version="1.1.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
-    <PackageReference Include="NLog" Version="4.5.3" />
-    <PackageReference Include="NLog.Schema" Version="4.5.3" />
-    <PackageReference Include="Q2gHelperQrs" Version="1.0.10" />    
-    <PackageReference Include="SerApi" Version="2.0.8" />
-    <PackageReference Include="WebSocket4Net" Version="0.15.2" />
-  </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Properties\" />
@@ -34,17 +24,53 @@
 
   <Choose>
     <When Condition="'$(Configuration)' == 'Release'">
+      <PropertyGroup>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+      </PropertyGroup>
       <ItemGroup>
-        <PackageReference Include="Q2gHelperQrs" Version="1.0.10" />
+        <PackageReference Include="Q2gHelperQrs" Version="1.0.12" />
+        <PackageReference Include="SerApi" Version="2.0.9" />
       </ItemGroup>
     </When>
     <Otherwise>
+      <PropertyGroup>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+      </PropertyGroup>
       <ItemGroup>
         <Reference Include="Q2gHelperQrs">
           <HintPath>..\..\q2g-helper-qrs-nuget\src\bin\Debug\netcoreapp2.0\Q2gHelperQrs.dll</HintPath>
+        </Reference>
+        <Reference Include="Q2gHelperQrs">
+          <HintPath>..\..\ser-api-nuget\src\bin\Debug\netcoreapp2.0\SerApi.dll</HintPath>
         </Reference>
       </ItemGroup>
     </Otherwise>
   </Choose>
 
+  <Target Name="WriteVersion" AfterTargets="GetVersion">
+    <WriteLinesToFile File="$(SolutionDir)\obj\version.txt" Lines="$(GitVersion_NuGetVersion)" Overwrite="true" />
+  </Target>
+  <Target Name="SetPackageVersionFromFile" BeforeTargets="GenerateNuspec">
+    <ReadLinesFromFile File="$(SolutionDir)\obj\version.txt">
+      <Output TaskParameter="Lines" PropertyName="PackageVersion" />
+    </ReadLinesFromFile>
+  </Target>
+
+  <Target Name="PublishToNugetWithAPIKey" AfterTargets="GenerateNuspec">
+    <ReadLinesFromFile File="$(SolutionDir)\..\..\nugetapikey.txt">
+      <Output TaskParameter="Lines" PropertyName="NugetAPIKey" />
+    </ReadLinesFromFile>
+    <Exec WorkingDirectory="$(BaseDir)" Command="dotnet nuget push $(PackageOutputAbsolutePath)$(PackageId).$(PackageVersion).nupkg -k $(NugetAPIKey) -s https://api.nuget.org/v3/index.json" />
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="GitVersionTask" Version="4.0.0-beta0008">
+      <PrivateAssets>All</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.PlatformAbstractions" Version="1.1.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <PackageReference Include="NLog" Version="4.5.3" />
+    <PackageReference Include="NLog.Schema" Version="4.5.3" />
+    <PackageReference Include="WebSocket4Net" Version="0.15.2" />
+  </ItemGroup>
 </Project>
