@@ -285,7 +285,10 @@
                         }
 
                         if (ondemandMode)
+                        {
+                            hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
                             OnDemandDownloadLink = hubInfo?.References?.FirstOrDefault()?.ExternalPath ?? null;
+                        }
 
                         if (hubUserId != null)
                         {
@@ -372,9 +375,9 @@
                 //send merged mail infos
                 foreach (var report in mailList)
                 {
-                    var toAddresses = report.Settings.EMail?.To?.Split(';') ?? new string[0];
-                    var ccAddresses = report.Settings.EMail?.Cc?.Split(';') ?? new string[0];
-                    var bccAddresses = report.Settings.EMail?.Bcc?.Split(';') ?? new string[0];
+                    var toAddresses = report.Settings.To?.Split(';') ?? new string[0];
+                    var ccAddresses = report.Settings.Cc?.Split(';') ?? new string[0];
+                    var bccAddresses = report.Settings.Bcc?.Split(';') ?? new string[0];
 
                     var mailMessage = new MailMessage()
                     {
