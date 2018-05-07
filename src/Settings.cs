@@ -50,7 +50,7 @@
         public string Target { get; set; }
         public DistributeMode Mode { get; set; }
         public string Owner { get; set; }
-        public SerConnection Connection { get; set; }
+        public List<SerConnection> Connections { get; set; }
         #endregion
     }
 

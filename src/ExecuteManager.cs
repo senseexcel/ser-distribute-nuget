@@ -144,8 +144,9 @@
         public void CopyFile(FileSettings settings, List<string> paths, string reportName)
         {
             try
-            {       
-                GlobalConnection = settings.Connection;
+            {
+                var currentConnection = settings?.Connections?.FirstOrDefault();
+                GlobalConnection = currentConnection ?? null;
                 var target = settings.Target?.ToLowerInvariant()?.Trim() ?? null;
                 if(target == null)
                 {
@@ -164,7 +165,7 @@
                     targetPath = pathMapper[target];
                 else
                 {
-                    targetPath = NormalizeLibPath(target, settings.Connection);
+                    targetPath = NormalizeLibPath(target, currentConnection);
                     if (targetPath == null)
                         throw new Exception("The could not resolved.");
                     pathMapper.Add(target, targetPath);
@@ -205,11 +206,12 @@
         public Task UploadToHub(HubSettings settings, List<string> paths, string reportName, bool ondemandMode)
         {
             try
-            {               
-                GlobalConnection = settings.Connection;
+            {
+                var currentConnection = settings?.Connections?.FirstOrDefault();
+                GlobalConnection = currentConnection;
                 var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                var hub = new QlikQrsHub(settings.Connection.ServerUri, new Cookie(settings.Connection.Credentials.Key,
-                                                                                   settings.Connection.Credentials.Value));
+                var hub = new QlikQrsHub(currentConnection.ServerUri, new Cookie(currentConnection.Credentials.Key,
+                                                                                 currentConnection.Credentials.Value));
                 foreach (var path in paths)
                 {
                     var contentName = $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(path).TrimStart('.').ToUpperInvariant()})";
