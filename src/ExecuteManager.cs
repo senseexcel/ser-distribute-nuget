@@ -28,7 +28,6 @@
 
         #region Properties
         public string OnDemandDownloadLink { get; set; }
-        public List<string> DeletePaths { get; set; }
         private static SerConnection GlobalConnection;
         private List<string> hubDeleteAll;
         private Dictionary<string, string> pathMapper;
@@ -36,7 +35,6 @@
 
         public ExecuteManager()
         {
-            DeletePaths = new List<string>();
             hubDeleteAll = new List<string>();
             pathMapper = new Dictionary<string, string>();
             ServicePointManager.ServerCertificateValidationCallback += ValidateRemoteCertificate;
@@ -105,21 +103,6 @@
             return null;
         }
 
-        private bool SoftDelete(string folder)
-        {
-            try
-            {
-                Directory.Delete(folder, true);
-                logger.Debug($"work dir {folder} deleted.");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                logger.Warn(ex, $"The Folder {folder} could not deleted.");
-                return false;
-            }
-        }
-
         private static bool ValidateRemoteCertificate(object sender, X509Certificate cert, X509Chain chain,
                                                       SslPolicyErrors error)
         {
@@ -161,8 +144,9 @@
         public void CopyFile(FileSettings settings, List<string> paths, string reportName)
         {
             try
-            {       
-                GlobalConnection = settings.Connection;
+            {
+                var currentConnection = settings?.Connections?.FirstOrDefault();
+                GlobalConnection = currentConnection ?? null;
                 var target = settings.Target?.ToLowerInvariant()?.Trim() ?? null;
                 if(target == null)
                 {
@@ -181,7 +165,7 @@
                     targetPath = pathMapper[target];
                 else
                 {
-                    targetPath = NormalizeLibPath(target, settings.Connection);
+                    targetPath = NormalizeLibPath(target, currentConnection);
                     if (targetPath == null)
                         throw new Exception("The could not resolved.");
                     pathMapper.Add(target, targetPath);
@@ -200,11 +184,7 @@
                             logger.Info($"file {targetFile} was copied");
                             break;
                         case DistributeMode.DELETEALLFIRST:
-                            if (!DeletePaths.Contains(targetPath))
-                            {
-                                SoftDelete(targetPath);
-                                DeletePaths.Add(targetPath);
-                            }
+                            File.Delete(targetFile);
                             Directory.CreateDirectory(targetPath);
                             File.Copy(path, targetFile, false);
                             break;
@@ -226,11 +206,12 @@
         public Task UploadToHub(HubSettings settings, List<string> paths, string reportName, bool ondemandMode)
         {
             try
-            {               
-                GlobalConnection = settings.Connection;
+            {
+                var currentConnection = settings?.Connections?.FirstOrDefault();
+                GlobalConnection = currentConnection;
                 var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                var hub = new QlikQrsHub(settings.Connection.ServerUri, new Cookie(settings.Connection.Credentials.Key,
-                                                                                   settings.Connection.Credentials.Value));
+                var hub = new QlikQrsHub(currentConnection.ServerUri, new Cookie(currentConnection.Credentials.Key,
+                                                                                 currentConnection.Credentials.Value));
                 foreach (var path in paths)
                 {
                     var contentName = $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(path).TrimStart('.').ToUpperInvariant()})";
@@ -306,7 +287,10 @@
                         }
 
                         if (ondemandMode)
+                        {
+                            hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
                             OnDemandDownloadLink = hubInfo?.References?.FirstOrDefault()?.ExternalPath ?? null;
+                        }
 
                         if (hubUserId != null)
                         {
@@ -393,9 +377,9 @@
                 //send merged mail infos
                 foreach (var report in mailList)
                 {
-                    var toAddresses = report.Settings.EMail?.To?.Split(';') ?? new string[0];
-                    var ccAddresses = report.Settings.EMail?.Cc?.Split(';') ?? new string[0];
-                    var bccAddresses = report.Settings.EMail?.Bcc?.Split(';') ?? new string[0];
+                    var toAddresses = report.Settings.To?.Split(';') ?? new string[0];
+                    var ccAddresses = report.Settings.Cc?.Split(';') ?? new string[0];
+                    var bccAddresses = report.Settings.Bcc?.Split(';') ?? new string[0];
 
                     var mailMessage = new MailMessage()
                     {

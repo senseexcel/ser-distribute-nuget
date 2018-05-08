@@ -47,7 +47,7 @@
             }
         }
 
-        public string Run(string resultFolder, bool onDemand = false)
+        public string Run(string resultFolder, bool onDemand = false, string privateKeyPath = null)
         {
             try
             {
@@ -74,7 +74,11 @@
                     var uploadTasks = new List<Task>();
                     foreach (var report in result.Reports)
                     {
-                        var locations = report?.Distribute?.Children().ToList() ?? new List<JToken>();
+                        var distribute = report?.Distribute ?? null;
+                        var resolver = new CryptoResolver(privateKeyPath);
+                        distribute = resolver.Resolve(distribute);
+
+                        var locations = distribute?.Children().ToList() ?? new List<JToken>();
                         foreach (var location in locations)
                         {
                             var settings = GetSettings<BaseDeliverySettings>(location, true);

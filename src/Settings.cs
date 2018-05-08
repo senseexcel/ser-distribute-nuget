@@ -50,7 +50,9 @@
         public string Target { get; set; }
         public DistributeMode Mode { get; set; }
         public string Owner { get; set; }
-        public SerConnection Connection { get; set; }
+
+        [JsonProperty(nameof(Connections)), JsonConverter(typeof(SingleValueArrayConverter))]
+        public List<SerConnection> Connections { get; set; }
         #endregion
     }
 
@@ -70,7 +72,9 @@
         #region Variables & Properties       
         public string Subject { get; set; }
         public string Message { get; set; }
-        public MailAddresses EMail { get; set; }
+        public string To { get; set; }
+        public string Cc { get; set; }
+        public string Bcc { get; set; }
         public MailServerSettings MailServer { get; set; }      
         [JsonIgnore]
         public List<string> Paths { get; set; }
@@ -80,21 +84,7 @@
 
         public override string ToString()
         {
-            return $"{Subject}|{Message}|{EMail.ToString()}";
-        }
-    }
-
-    public class MailAddresses
-    {
-        #region Variables & Properties
-        public string To { get; set; }
-        public string Cc { get; set; }
-        public string Bcc { get; set; }
-        #endregion
-
-        public override string ToString()
-        {
-            return $"{To}/{Cc}/{Bcc}";
+            return $"{Subject}|{Message}|{To}/{Cc}/{Bcc}";
         }
     }
 

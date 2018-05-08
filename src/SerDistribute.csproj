@@ -16,6 +16,15 @@
     <Folder Include="Properties\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Q2gHelperPem">
+      <HintPath>..\..\q2g-helper-pem-nuget\src\bin\Release\netcoreapp2.0\Q2gHelperPem.dll</HintPath>
+    </Reference>
+    <Reference Include="SerApi">
+      <HintPath>..\..\ser-api-nuget\src\bin\Debug\netcoreapp2.0\SerApi.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
   <Choose>
     <When Condition="'$(Configuration)' == 'Release'">
       <PropertyGroup>
@@ -65,6 +74,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
     <PackageReference Include="NLog" Version="4.5.3" />
     <PackageReference Include="NLog.Schema" Version="4.5.3" />
+    <PackageReference Include="SerApi" Version="3.0.0" />
     <PackageReference Include="WebSocket4Net" Version="0.15.2" />
   </ItemGroup>
 </Project>
