@@ -50,6 +50,8 @@
         public string Target { get; set; }
         public DistributeMode Mode { get; set; }
         public string Owner { get; set; }
+
+        [JsonProperty(nameof(Connections)), JsonConverter(typeof(SingleValueArrayConverter))]
         public List<SerConnection> Connections { get; set; }
         #endregion
     }
