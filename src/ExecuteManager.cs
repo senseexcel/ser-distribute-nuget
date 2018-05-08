@@ -184,7 +184,8 @@
                             logger.Info($"file {targetFile} was copied");
                             break;
                         case DistributeMode.DELETEALLFIRST:
-                            File.Delete(targetFile);
+                            if (File.Exists(targetFile))
+                                File.Delete(targetFile);
                             Directory.CreateDirectory(targetPath);
                             File.Copy(path, targetFile, false);
                             break;
