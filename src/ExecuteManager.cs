@@ -342,7 +342,6 @@
                         throw new Exception($"Unknown hub mode {settings.Mode}");
                     }
                 }
-
                 return null;
             }
             catch (Exception ex)
