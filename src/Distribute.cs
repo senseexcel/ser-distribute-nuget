@@ -122,7 +122,7 @@
                     //Send Mail 
                     if (mailList.Count > 0)
                     {
-                        logger.Info("Check - Send Mails ...");
+                        logger.Info("Check - Send Mails...");
                         execute.SendMails(mailList);
                     }
                 }
