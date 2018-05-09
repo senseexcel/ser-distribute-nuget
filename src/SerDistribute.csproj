@@ -15,16 +15,7 @@
   <ItemGroup>
     <Folder Include="Properties\" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Q2gHelperPem">
-      <HintPath>..\..\q2g-helper-pem-nuget\src\bin\Release\netcoreapp2.0\Q2gHelperPem.dll</HintPath>
-    </Reference>
-    <Reference Include="SerApi">
-      <HintPath>..\..\ser-api-nuget\src\bin\Debug\netcoreapp2.0\SerApi.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
+  
   <Choose>
     <When Condition="'$(Configuration)' == 'Release'">
       <PropertyGroup>
