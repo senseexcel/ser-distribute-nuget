@@ -19,6 +19,14 @@
         private static Logger logger = LogManager.GetCurrentClassLogger();
         #endregion
 
+        public static string DistributeVersion
+        {
+            get
+            {
+                return GitVersionInformation.InformationalVersion;
+            }
+        }
+
         private T GetSettings<T>(JToken json, bool typeOnly = false) where T : ISettings, new()
         {
             try
@@ -120,9 +128,11 @@
                     Task.WaitAll(uploadTasks.ToArray());
 
                     //Send Mail 
-                    logger.Info("Check - Send Mails ...");
                     if (mailList.Count > 0)
+                    {
+                        logger.Info("Check - Send Mails...");
                         execute.SendMails(mailList);
+                    }
                 }
 
                 if (onDemand)

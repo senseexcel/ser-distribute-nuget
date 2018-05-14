@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
@@ -24,6 +24,7 @@
       <ItemGroup>
         <PackageReference Include="Q2gHelperQrs" Version="1.0.12" />
         <PackageReference Include="SerApi" Version="3.0.0" />
+        <PackageReference Include="Q2gHelperPem" Version="1.0.6" />
       </ItemGroup>
     </When>
     <Otherwise>
@@ -36,6 +37,9 @@
         </Reference>
         <Reference Include="SerApi">
           <HintPath>..\..\ser-api-nuget\src\bin\Debug\netcoreapp2.0\SerApi.dll</HintPath>
+        </Reference>
+        <Reference Include="Q2gHelperPem">
+          <HintPath>..\..\q2g-helper-pem-nuget\src\bin\Debug\netcoreapp2.0\Q2gHelperPem.dll</HintPath>
         </Reference>
       </ItemGroup>
     </Otherwise>
