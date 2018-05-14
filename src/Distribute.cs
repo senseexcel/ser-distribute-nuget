@@ -19,7 +19,7 @@
         private static Logger logger = LogManager.GetCurrentClassLogger();
         #endregion
 
-        public string DistributeVersion
+        public static string DistributeVersion
         {
             get
             {
