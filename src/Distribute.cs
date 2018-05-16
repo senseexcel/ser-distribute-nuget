@@ -19,14 +19,6 @@
         private static Logger logger = LogManager.GetCurrentClassLogger();
         #endregion
 
-        public static string DistributeVersion
-        {
-            get
-            {
-                return GitVersionInformation.InformationalVersion;
-            }
-        }
-
         private T GetSettings<T>(JToken json, bool typeOnly = false) where T : ISettings, new()
         {
             try

@@ -299,9 +299,9 @@
                             {
                                 Id = hubInfo.Id,
                                 Type = "Qlik report",
-                                Owner = new HubOwer()
+                                Owner = new Owner()
                                 {
-                                    Id = hubUserId,
+                                    Id = hubUserId.ToString(),
                                     UserId = hubUser.UserId,
                                     UserDirectory = hubUser.UserDirectory,
                                     Name = hubUser.UserId,
