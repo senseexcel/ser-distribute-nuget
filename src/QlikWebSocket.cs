@@ -72,10 +72,8 @@
             isOpen = true;
         }
 
-        private JObject Send(string json)
+        private JObject Send(string msg)
         {
-            var msg = json.Replace("'", "\"");
-
             try
             {
                 response = null;
@@ -138,37 +136,37 @@
 
         public JObject OpenDoc(string appId)
         {
-            var msg = @"{'method':'OpenDoc','handle':-1,'params':{'qDocName':'" + appId + "', 'qNoData':false},'jsonrpc':'2.0'}";
+            var msg = $"{{\"method\":\"OpenDoc\",\"handle\":-1,\"params\":{{\"qDocName\":\"{appId}\", \"qNoData\":false}},\"jsonrpc\":\"2.0\"}}";
             return Send(msg);
         }
 
         public JObject GetActiveDoc()
         {
-            var msg = @"{'method':'GetActiveDoc','handle':-1,'params':{},'jsonrpc':'2.0'}";
+            var msg = $"{{\"method\":\"GetActiveDoc\",\"handle\":-1,\"params\":{{}},\"jsonrpc\":\"2.0\"}}";
             return Send(msg);
         }
 
         public JObject GetContentLibraries(string handle)
         {
-            var msg = @"{'method':'GetContentLibraries','handle':" + handle + ",'params':{},'jsonrpc':'2.0'}";
+            var msg = $"{{\"method\":\"GetContentLibraries\",\"handle\":{handle},\"params\":{{}},\"jsonrpc\":\"2.0\"}}";
             return Send(msg);
         }
 
         public JObject GetLibraryContent(string handle, string qName)
         {
-            var msg = @"{'method':'GetLibraryContent','handle':" + handle + ",'params':{'qName':'" + qName + "'},'jsonrpc':'2.0'}";
+            var msg = $"{{\"method\":\"GetLibraryContent\",\"handle\":{handle},\"params\":{{\"qName\":\"{ qName}\"}},\"jsonrpc\":\"2.0\"}}";
             return Send(msg);
         }
 
         public JObject GetConnections(string handle)
         {
-            var msg = @"{'method':'GetConnections','handle':" + handle + ",'params':{},'jsonrpc':'2.0'}";
+            var msg = $"{{\"method\":\"GetConnections\",\"handle\":{handle},\"params\":{{}},\"jsonrpc\":\"2.0\"}}";
             return Send(msg);
         }
 
-        public JObject IsDesktop()
+        public JObject IsDesktop(string appId)
         {
-            var msg = @"{'method':'OpenDoc','handle':-1,'params':{'qDocName':'ee9799d9-55b0-4225-99cb-b3d5ddf7a9d6', 'qNoData':false},'jsonrpc':'2.0'}";
+            var msg = $"{{\"method\":\"OpenDoc\",\"handle\":-1,\"params\":{{\"qDocName\":\"{appId}\", \"qNoData\":false}},\"jsonrpc\":\"2.0\"}}";
             return Send(msg);
         }
     }

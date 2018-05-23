@@ -67,14 +67,15 @@
         {
             var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             var cookie = new Cookie(settings.Credentials.Key, settings.Credentials.Value);
-            var libUri = new Uri(path);
+            var result = UriUtils.NormalizeUri(path);
+            var libUri = result.Item1;
             var connections = GetConnections(settings.ServerUri, settings.App, cookie);
             if (connections != null)
             {
-                var libResult = connections.FirstOrDefault(n => n["qName"].ToString().ToLowerInvariant() == libUri.Host) ?? null;
+                var libResult = connections.FirstOrDefault(n => n["qName"].ToString().ToLowerInvariant() == result.Item2) ?? null;
                 if(libResult == null)
                 {
-                    logger.Error($"No data connection with name {libUri.Host} found.");
+                    logger.Error($"No data connection with name {result.Item2} found.");
                     return null;
                 }
                 var libPath = libResult["qConnectionString"].ToString();
