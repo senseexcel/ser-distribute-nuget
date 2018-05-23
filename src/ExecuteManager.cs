@@ -71,7 +71,12 @@
             var connections = GetConnections(settings.ServerUri, settings.App, cookie);
             if (connections != null)
             {
-                var libResult = connections.FirstOrDefault(n => n["qName"].ToString().ToLowerInvariant() == libUri.Host);
+                var libResult = connections.FirstOrDefault(n => n["qName"].ToString().ToLowerInvariant() == libUri.Host) ?? null;
+                if(libResult == null)
+                {
+                    logger.Error($"No data connection with name {libUri.Host} found.");
+                    return null;
+                }
                 var libPath = libResult["qConnectionString"].ToString();
                 return Path.Combine(libPath, libUri.LocalPath.Replace("/", "\\").Trim().Trim('\\'));
             }
