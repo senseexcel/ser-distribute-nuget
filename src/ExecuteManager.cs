@@ -128,7 +128,7 @@
 
             if (requestUri != null)
             {
-                var thumbprints = GlobalConnection.SslValidThumbprints;
+                var thumbprints = GlobalConnection.SslValidThumbprints ?? new List<SerThumbprint>();
                 foreach (var item in thumbprints)
                 {
                     try
@@ -335,8 +335,12 @@
 
                         foreach (var sharedContent in sharedContentInfos)
                         {
-                            if (sharedContent.Owner.ToString() == hubUser.ToString())
-                                 hub.DeleteSharedContentAsync(new HubDeleteRequest() { Id = sharedContent.Id.Value }).Wait();
+                            var serMetaType = sharedContent.MetaData.Where(m => m.Key == "ser-type" && m.Value == "report").SingleOrDefault() ?? null;
+                            if (sharedContent.MetaData == null)
+                                serMetaType = new MetaData();
+
+                            if (serMetaType != null && sharedContent.Owner.ToString() == hubUser.ToString())
+                                hub.DeleteSharedContentAsync(new HubDeleteRequest() { Id = sharedContent.Id.Value }).Wait();
                         }
 
                         settings.Mode = DistributeMode.CREATEONLY;
