@@ -24,12 +24,12 @@
             catch
             {
                 logger.Debug("Read uri in compatibility mode");
-                var uri1 = input.Replace("://", "://host/");
-                var uri = new Uri(uri1);
-                var fragments = uri.Fragment.Split('/');
+                var tempUri = input.Replace("://", "://host/");
+                var uri = new Uri(tempUri);
+                var parts = input.Split(new char[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
                 var host = uri.OriginalString.Split('/').ElementAtOrDefault(3);
-                var uri2 = String.Join('/', fragments.Skip(1)).TrimEnd('/');
-                var normalUri = new Uri($"{uri.Scheme}://host/{uri2}");
+                var segment = String.Join('/', parts.Skip(2)).TrimEnd('/');
+                var normalUri = new Uri($"{uri.Scheme}://host/{segment}");
                 return new Tuple<Uri, string>(normalUri, host);
             }
         }
