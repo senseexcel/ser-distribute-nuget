@@ -67,6 +67,14 @@
 
     public class HubSettings : DeliverySettings { }
 
+    public class SFtp : DeliverySettings
+    {
+        //Target = /home/user/test
+        //Owner = User@Passwort
+        //Port = 22
+        //Host = server.de
+    }
+
     public class MailSettings : BaseDeliverySettings
     {
         #region Variables & Properties       
@@ -96,6 +104,7 @@
         public int Port { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
+        public bool UseSsl { get; set; }
         #endregion
     }
 }
