@@ -427,7 +427,8 @@
                     {
                         Credentials = new NetworkCredential(report.ServerSettings.Username, report.ServerSettings.Password),
                     };
-                    logger.Debug("send mail package...");
+                    logger.Debug("Send mail package...");
+                    client.EnableSsl = report.ServerSettings.UseSsl;
                     client.Send(mailMessage);
                 }
             }
