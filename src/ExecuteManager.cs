@@ -134,8 +134,8 @@
                     try
                     {
                         var uri = new Uri(item.Url);
-                        var thumbprint = item.Thumbprint.Replace(":", "").Replace(" ", "");
-                        if (thumbprint == cert.GetCertHashString() &&
+                        var thumbprint = item.Thumbprint.Replace(":", "").Replace(" ", "").ToLowerInvariant();
+                        if (thumbprint == cert.GetCertHashString().ToLowerInvariant() &&
                            uri.Host.ToLowerInvariant() == requestUri.Host.ToLowerInvariant())
                             return true;
                     }
