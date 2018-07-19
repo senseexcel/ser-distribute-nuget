@@ -37,6 +37,7 @@
         {
             hubDeleteAll = new List<string>();
             pathMapper = new Dictionary<string, string>();
+            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
             ServicePointManager.ServerCertificateValidationCallback += ValidateRemoteCertificate;
         }
 

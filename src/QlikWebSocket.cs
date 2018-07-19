@@ -6,6 +6,7 @@
     using System;
     using System.Collections.Generic;
     using System.Net;
+    using System.Security.Authentication;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -39,7 +40,8 @@
             }
             newUri.Path = $"{newUri.Path}/app/engineData";
             var cookies = new List<KeyValuePair<string, string>>() { new KeyValuePair<string, string>(cookie.Name, cookie.Value), };
-            websocket = new WebSocket(newUri.Uri.AbsoluteUri, cookies: cookies, version: WebSocketVersion.Rfc6455);
+            websocket = new WebSocket(newUri.Uri.AbsoluteUri, cookies: cookies, version: WebSocketVersion.Rfc6455,
+                                      sslProtocols: SslProtocols.Tls12 | SslProtocols.Tls11 | SslProtocols.Tls);
             websocket.Opened += Websocket_Opened;
             websocket.Error += Websocket_Error;
             websocket.Closed += Websocket_Closed;
