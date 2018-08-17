@@ -364,6 +364,8 @@
 
         public void SendMails(List<MailSettings> settingsList)
         {
+            SmtpClient client = null;
+
             try
             {
                 var mailList = new List<EMailReport>();
@@ -396,7 +398,7 @@
                     {
                         Subject = report.Settings.Subject,
                     };
-                    var msgBody = report.Settings.Message;
+                    var msgBody = report.Settings.Message.Trim();
                     if (msgBody.Contains("</html>"))
                         mailMessage.IsBodyHtml = true;
                     else
@@ -424,17 +426,20 @@
                             mailMessage.Bcc.Add(address);
                     }
 
-                    var client = new SmtpClient(report.ServerSettings.Host, report.ServerSettings.Port)
+                    client = new SmtpClient(report.ServerSettings.Host, report.ServerSettings.Port)
                     {
                         Credentials = new NetworkCredential(report.ServerSettings.Username, report.ServerSettings.Password),
                     };
                     logger.Debug("Send mail package...");
                     client.EnableSsl = report.ServerSettings.UseSsl;
                     client.Send(mailMessage);
+                    client.Dispose();
                 }
             }
             catch (Exception ex)
             {
+                if (client != null)
+                    client.Dispose();
                 logger.Error(ex, "The reports could not be sent as mail.");
             }
         }
