@@ -400,10 +400,11 @@
                     };
                     var msgBody = report.Settings.Message.Trim();
                     if (msgBody.Contains("</html>"))
+                    {
                         mailMessage.IsBodyHtml = true;
-                    else
-                        mailMessage.Body = msgBody.Replace("{n}", "\r\n");
-
+                        msgBody.Replace("{n}", "<br/>");
+                    }
+                    mailMessage.Body = msgBody.Replace("{n}", "\r\n");
                     mailMessage.From = new MailAddress(report.ServerSettings.From);
                     foreach (var attach in report.ReportPaths)
                         mailMessage.Attachments.Add(attach);
