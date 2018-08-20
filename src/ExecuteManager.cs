@@ -407,7 +407,7 @@
                         case EMailType.HTML:
                             mailMessage.IsBodyHtml = true;
                             break;
-                        case EMailType.MARKUP:
+                        case EMailType.MARKDOWN:
                             mailMessage.IsBodyHtml = true;
                             msgBody = Markdown.ToHtml(msgBody);
                             break;
