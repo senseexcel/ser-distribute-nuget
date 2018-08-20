@@ -18,6 +18,7 @@
     using System.Net.Security;
     using System.Security.Cryptography.X509Certificates;
     using Ser.Api;
+    using Markdig;
     #endregion
 
     public class ExecuteManager
@@ -393,17 +394,27 @@
                     var toAddresses = report.Settings.To?.Split(';') ?? new string[0];
                     var ccAddresses = report.Settings.Cc?.Split(';') ?? new string[0];
                     var bccAddresses = report.Settings.Bcc?.Split(';') ?? new string[0];
-
                     var mailMessage = new MailMessage()
                     {
                         Subject = report.Settings.Subject,
                     };
                     var msgBody = report.Settings.Message.Trim();
-                    if (msgBody.Contains("</html>"))
-                        mailMessage.IsBodyHtml = true;
-                    else
-                        mailMessage.Body = msgBody.Replace("{n}", "\r\n");
-
+                    switch (report.Settings.MailType)
+                    {
+                        case EMailType.TEXT:
+                            msgBody = msgBody.Replace("{n}", "\r\n");
+                            break;
+                        case EMailType.HTML:
+                            mailMessage.IsBodyHtml = true;
+                            break;
+                        case EMailType.MARKDOWN:
+                            mailMessage.IsBodyHtml = true;
+                            msgBody = Markdown.ToHtml(msgBody);
+                            break;
+                        default:
+                            throw new Exception($"Unknown mail type {report.Settings.MailType}");
+                    }
+                    mailMessage.Body = msgBody;
                     mailMessage.From = new MailAddress(report.ServerSettings.From);
                     foreach (var attach in report.ReportPaths)
                         mailMessage.Attachments.Add(attach);
