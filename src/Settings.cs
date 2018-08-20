@@ -13,6 +13,13 @@
     #endregion
 
     #region Enumerations
+    public enum EMailType
+    {
+        TEXT,
+        HTML,
+        MARKUP
+    }
+
     public enum SettingsType
     {
         MAIL,
@@ -72,6 +79,7 @@
         #region Variables & Properties       
         public string Subject { get; set; }
         public string Message { get; set; }
+        public EMailType MailType { get; set; } = EMailType.TEXT;
         public string To { get; set; }
         public string Cc { get; set; }
         public string Bcc { get; set; }
