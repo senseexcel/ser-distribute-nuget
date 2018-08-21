@@ -39,7 +39,8 @@
             hubDeleteAll = new List<string>();
             pathMapper = new Dictionary<string, string>();
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
-            ServicePointManager.ServerCertificateValidationCallback += ValidateRemoteCertificate;
+            if (ServicePointManager.ServerCertificateValidationCallback == null)
+                ServicePointManager.ServerCertificateValidationCallback += ValidateRemoteCertificate;
         }
 
         #region Private Methods
@@ -117,7 +118,7 @@
             if (error == SslPolicyErrors.None)
                 return true;
 
-            if (!GlobalConnection.SslVerify)
+            if (!GlobalConnection?.SslVerify ?? true)
                 return true;
 
             Uri requestUri = null;
