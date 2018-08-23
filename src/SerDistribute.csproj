@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
     <Authors>Konrad Mattheis und Martin Berthold</Authors>
     <Company>senseexcel</Company>
     <Copyright>Copyright (c) 2018</Copyright>
@@ -33,13 +33,13 @@
       </PropertyGroup>
       <ItemGroup>
         <Reference Include="Q2gHelperQrs">
-          <HintPath>..\..\q2g-helper-qrs-nuget\src\bin\Debug\netcoreapp2.0\Q2gHelperQrs.dll</HintPath>
+          <HintPath>..\..\q2g-helper-qrs-nuget\src\bin\Debug\netcoreapp2.1\Q2gHelperQrs.dll</HintPath>
         </Reference>
         <Reference Include="SerApi">
-          <HintPath>..\..\ser-api-nuget\src\bin\Debug\netcoreapp2.0\SerApi.dll</HintPath>
+          <HintPath>..\..\ser-api-nuget\src\bin\Debug\netcoreapp2.1\SerApi.dll</HintPath>
         </Reference>
         <Reference Include="Q2gHelperPem">
-          <HintPath>..\..\q2g-helper-pem-nuget\src\bin\Debug\netcoreapp2.0\Q2gHelperPem.dll</HintPath>
+          <HintPath>..\..\q2g-helper-pem-nuget\src\bin\Debug\netcoreapp2.1\Q2gHelperPem.dll</HintPath>
         </Reference>
       </ItemGroup>
     </Otherwise>
@@ -65,7 +65,7 @@
     <PackageReference Include="GitVersionTask" Version="4.0.0-beta0008">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Markdig" Version="0.15.1" />
+    <PackageReference Include="Markdig" Version="0.15.2" />
     <PackageReference Include="Microsoft.Extensions.PlatformAbstractions" Version="1.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
     <PackageReference Include="NLog" Version="4.5.8" />
