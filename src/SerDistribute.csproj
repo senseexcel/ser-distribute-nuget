@@ -23,8 +23,8 @@
       </PropertyGroup>
       <ItemGroup>
         <PackageReference Include="Q2gHelperQrs" Version="1.2.1" />
-        <PackageReference Include="SerApi" Version="3.1.9" />
-        <PackageReference Include="Q2gHelperPem" Version="1.0.6" />
+        <PackageReference Include="SerApi" Version="3.2.0" />
+        <PackageReference Include="Q2gHelperPem" Version="1.1.0" />
       </ItemGroup>
     </When>
     <Otherwise>
@@ -45,15 +45,6 @@
     </Otherwise>
   </Choose>
 
-  <Target Name="WriteVersion" AfterTargets="GetVersion">
-    <WriteLinesToFile File="$(SolutionDir)\obj\version.txt" Lines="$(GitVersion_NuGetVersion)" Overwrite="true" />
-  </Target>
-  <Target Name="SetPackageVersionFromFile" BeforeTargets="GenerateNuspec">
-    <ReadLinesFromFile File="$(SolutionDir)\obj\version.txt">
-      <Output TaskParameter="Lines" PropertyName="PackageVersion" />
-    </ReadLinesFromFile>
-  </Target>
-
   <Target Name="PublishToNugetWithAPIKey" AfterTargets="GenerateNuspec">
     <ReadLinesFromFile File="$(SolutionDir)\..\..\nugetapikey.txt">
       <Output TaskParameter="Lines" PropertyName="NugetAPIKey" />
@@ -62,13 +53,14 @@
   </Target>
 
   <ItemGroup>
-    <PackageReference Include="GitVersionTask" Version="4.0.0-beta0008">
-      <PrivateAssets>All</PrivateAssets>
+    <PackageReference Include="GitVersionTask" Version="4.0.0-beta0014">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Markdig" Version="0.15.2" />
     <PackageReference Include="Microsoft.Extensions.PlatformAbstractions" Version="1.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
-    <PackageReference Include="NLog" Version="4.5.8" />
+    <PackageReference Include="NLog" Version="4.5.9" />
     <PackageReference Include="WebSocket4Net" Version="0.15.2" />
   </ItemGroup>
 </Project>
