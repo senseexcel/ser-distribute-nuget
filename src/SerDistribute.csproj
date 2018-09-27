@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>netcoreapp2.0;netcoreapp2.1</TargetFrameworks>
+    <TargetFrameworks>netcoreapp2.1</TargetFrameworks>
     <Authors>Konrad Mattheis und Martin Berthold</Authors>
     <Company>senseexcel</Company>
     <Copyright>Copyright (c) 2018</Copyright>
@@ -23,7 +23,7 @@
       </PropertyGroup>
       <ItemGroup>
         <PackageReference Include="Q2gHelperQrs" Version="1.2.1" />
-        <PackageReference Include="SerApi" Version="3.2.2" />
+        <PackageReference Include="SerApi" Version="3.2.3" />
         <PackageReference Include="Q2gHelperPem" Version="1.1.0" />
       </ItemGroup>
     </When>
@@ -33,13 +33,13 @@
       </PropertyGroup>
       <ItemGroup>
         <Reference Include="Q2gHelperQrs">
-          <HintPath>..\..\q2g-helper-qrs-nuget\src\bin\Debug\netcoreapp2.0\Q2gHelperQrs.dll</HintPath>
+          <HintPath>..\..\q2g-helper-qrs-nuget\src\bin\Debug\$(TargetFramework)\Q2gHelperQrs.dll</HintPath>
         </Reference>
         <Reference Include="SerApi">
-          <HintPath>..\..\ser-api-nuget\src\bin\Debug\netcoreapp2.0\SerApi.dll</HintPath>
+          <HintPath>..\..\ser-api-nuget\src\bin\Debug\$(TargetFramework)\SerApi.dll</HintPath>
         </Reference>
         <Reference Include="Q2gHelperPem">
-          <HintPath>..\..\q2g-helper-pem-nuget\src\bin\Debug\netcoreapp2.0\Q2gHelperPem.dll</HintPath>
+          <HintPath>..\..\q2g-helper-pem-nuget\src\bin\Debug\$(TargetFramework)\Q2gHelperPem.dll</HintPath>
         </Reference>
       </ItemGroup>
     </Otherwise>
