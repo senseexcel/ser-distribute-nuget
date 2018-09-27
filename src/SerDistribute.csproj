@@ -23,8 +23,8 @@
       </PropertyGroup>
       <ItemGroup>
         <PackageReference Include="Q2gHelperQrs" Version="1.2.1" />
-        <PackageReference Include="SerApi" Version="3.1.9" />
-        <PackageReference Include="Q2gHelperPem" Version="1.0.6" />
+        <PackageReference Include="SerApi" Version="3.2.2" />
+        <PackageReference Include="Q2gHelperPem" Version="1.1.0" />
       </ItemGroup>
     </When>
     <Otherwise>
@@ -65,10 +65,10 @@
     <PackageReference Include="GitVersionTask" Version="4.0.0-beta0008">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Markdig" Version="0.15.2" />
+    <PackageReference Include="Markdig" Version="0.15.3" />
     <PackageReference Include="Microsoft.Extensions.PlatformAbstractions" Version="1.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
-    <PackageReference Include="NLog" Version="4.5.8" />
+    <PackageReference Include="NLog" Version="4.5.10" />
     <PackageReference Include="WebSocket4Net" Version="0.15.2" />
   </ItemGroup>
 </Project>
