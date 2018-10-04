@@ -343,7 +343,7 @@
                             var newHubInfo = new HubInfo()
                             {
                                 Id = hubInfo.Id,
-                                Type = "Qlik report",
+                                Type = settings.SharedContentType,
                                 Owner = new Owner()
                                 {
                                     Id = hubUserId.ToString(),
