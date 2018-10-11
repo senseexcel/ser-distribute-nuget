@@ -297,6 +297,7 @@
                             var createRequest = new HubCreateRequest()
                             {
                                 Name = contentName,
+                                ReportType = settings.SharedContentType,
                                 Description = "Created by Sense Excel Reporting",
                                 Data = new ContentData()
                                 {
