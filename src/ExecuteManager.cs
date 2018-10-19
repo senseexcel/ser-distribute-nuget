@@ -19,6 +19,11 @@
     using System.Security.Cryptography.X509Certificates;
     using Ser.Api;
     using Markdig;
+    using Qlik.EngineAPI;
+    using enigma;
+    using ImpromptuInterface;
+    using System.Threading;
+    using System.Net.WebSockets;
     #endregion
 
     public class ExecuteManager
@@ -44,24 +49,45 @@
         }
 
         #region Private Methods
-        private List<JToken> GetConnections(Uri serverUri, string appId, Cookie cookie)
+        private IDoc GetSessionAppConnection(Uri uri, Cookie cookie, string appId)
         {
             try
             {
-                var results = new List<string>();
-                var qlikWebSocket = new QlikWebSocket(serverUri, cookie);
-                var isOpen = qlikWebSocket.OpenSocket();
-                var response = qlikWebSocket.OpenDoc(appId);
-                string handle = String.Empty;
-                if (response.ToString().Contains("App already open"))
-                    response = qlikWebSocket.GetActiveDoc();
-                handle = response["result"]["qReturn"]["qHandle"].ToString();
-                response = qlikWebSocket.GetConnections(handle);
-                return response["result"]["qConnections"].ToList();
+                var url = UriUtils.MakeWebSocketFromHttp(uri);
+                var connId = Guid.NewGuid().ToString();
+                url = $"{url}/app/engineData/identity/{connId}";
+                var config = new EnigmaConfigurations()
+                {
+                    Url = url,
+                    CreateSocket = async (Url) =>
+                    {
+                        try
+                        {
+                            var webSocket = new ClientWebSocket();
+                            webSocket.Options.RemoteCertificateValidationCallback = ValidationCallback.ValidateRemoteCertificate;
+                            webSocket.Options.Cookies = new CookieContainer();
+                            webSocket.Options.Cookies.Add(cookie);
+                            await webSocket.ConnectAsync(new Uri(Url), CancellationToken.None);
+                            return webSocket;
+                        }
+                        catch (Exception ex)
+                        {
+                            var kk = ex.ToString();
+                            return null;
+                        }
+                    },
+                };
+                var session = Enigma.Create(config);
+                var globalTask = session.OpenAsync();
+                globalTask.Wait();
+                IGlobal global = Impromptu.ActLike<IGlobal>(globalTask.Result);
+                var doc = global.OpenDocAsync(appId).Result;
+                logger.Debug("websocket - success");
+                return doc;
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "No qlik lib connections found.");
+                logger.Error(ex, "create websocket connection was failed.");
                 return null;
             }
         }
@@ -69,22 +95,30 @@
         private string NormalizeLibPath(string path, SerConnection settings)
         {
             var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            var cookie = new Cookie(settings.Credentials.Key, settings.Credentials.Value);
+            var cookie = new Cookie(settings.Credentials.Key, settings.Credentials.Value)
+            {
+                Secure = true,
+                Domain = settings.ServerUri.Host,
+                Path = "/",
+            };
             var result = UriUtils.NormalizeUri(path);
             var libUri = result.Item1;
-            var connections = GetConnections(settings.ServerUri, settings.App, cookie);
+            var app = GetSessionAppConnection(settings.ServerUri, cookie, settings.App);
+            var connections = app?.GetConnectionsAsync().Result ?? null;
             if (connections != null)
             {
-                var libResult = connections.FirstOrDefault(n => n["qName"].ToString().ToLowerInvariant() == result.Item2) ?? null;
-                if(libResult == null)
+                var libResult = connections.FirstOrDefault(n => n.qName.ToLowerInvariant() == result.Item2) ?? null;
+                if (libResult == null)
                 {
                     logger.Error($"No data connection with name {result.Item2} found.");
                     return null;
                 }
-                var libPath = libResult["qConnectionString"].ToString();
+
+                var libPath = libResult.qConnectionString.ToString();
                 return Path.Combine(libPath, libUri.LocalPath.Replace("/", "\\").Trim().Trim('\\'));
             }
-
+            else
+                logger.Error("No data connections found.");
             return null;
         }
 
@@ -263,6 +297,7 @@
                             var createRequest = new HubCreateRequest()
                             {
                                 Name = contentName,
+                                ReportType = settings.SharedContentType,
                                 Description = "Created by Sense Excel Reporting",
                                 Data = new ContentData()
                                 {
@@ -309,7 +344,7 @@
                             var newHubInfo = new HubInfo()
                             {
                                 Id = hubInfo.Id,
-                                Type = "Qlik report",
+                                Type = settings.SharedContentType,
                                 Owner = new Owner()
                                 {
                                     Id = hubUserId.ToString(),

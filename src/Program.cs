@@ -11,6 +11,7 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Reflection;
     using System.Threading.Tasks;
     #endregion
 
@@ -24,6 +25,7 @@
         {
             try
             {
+                Console.Title = Assembly.GetExecutingAssembly().GetName().Name;
                 SetLoggerSettings("App.config");
                 logger.Info("SerDistribute running.");
                 logger.Info($"Version: {GitVersionInformation.InformationalVersion}");
