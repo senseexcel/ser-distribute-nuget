@@ -64,7 +64,7 @@
     <PackageReference Include="NLog" Version="4.5.10" />
     <PackageReference Include="qlik-engineapi" Version="0.1.0-alpha0075" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta-63127-02" PrivateAssets="All" />
-    <PackageReference Include="GitVersionTask" Version="4.0.0-beta0014">
+    <PackageReference Include="GitVersionTask" Version="4.0.1-beta1-21">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
