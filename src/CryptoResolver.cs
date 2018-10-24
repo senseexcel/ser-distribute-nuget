@@ -56,8 +56,17 @@
             else
             {
                 var value = jtoken?.Value<string>() ?? String.Empty;
-                var parent = jtoken.Parent.Value<JProperty>();
-                parent.Value = GetDecyptText(value);
+                if (jtoken.Parent.Type != JTokenType.Array)
+                {
+                    var parent = jtoken.Parent.Value<JProperty>();
+                    parent.Value = GetDecyptText(value);
+                }
+                else
+                {
+                    var children = jtoken.Parent.ToObject<JArray>();
+                    for (int i = 0; i < children.Count; i++)
+                        children[i] = GetDecyptText(children[i].Value<string>());
+                }
             }
         }
 
