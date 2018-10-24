@@ -336,7 +336,7 @@
                         if (ondemandMode)
                         {
                             hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
-                            OnDemandDownloadLink = hubInfo?.References?.FirstOrDefault()?.ExternalPath ?? null;
+                            OnDemandDownloadLink = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains("/ondemand."))?.ExternalPath ?? null;
                         }
 
                         if (hubUserId != null)
