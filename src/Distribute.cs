@@ -51,6 +51,7 @@
         {
             try
             {
+                var resultMessage = "OK";
                 var execute = new ExecuteManager();
                 logger.Info("Read json result files...");
                 string[] jsonPaths = Directory.GetFiles(resultFolder, "*.json", SearchOption.TopDirectoryOnly);
@@ -90,7 +91,7 @@
                                         //copy reports
                                         logger.Info("Check - Copy Files...");
                                         var fileSettings = GetSettings<FileSettings>(location);
-                                        execute.CopyFile(fileSettings, report.Paths, report.Name);
+                                        resultMessage = execute.CopyFile(fileSettings, report.Paths, report.Name);
                                         break;
                                     case SettingsType.HUB:
                                         //upload to hub
@@ -123,14 +124,14 @@
                     if (mailList.Count > 0)
                     {
                         logger.Info("Check - Send Mails...");
-                        execute.SendMails(mailList);
+                        resultMessage = execute.SendMails(mailList);
                     }
                 }
 
                 if (onDemand)
                     return execute.OnDemandDownloadLink;
                 else
-                    return "OK";
+                    return resultMessage;
             }
             catch (Exception ex)
             {

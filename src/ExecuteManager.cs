@@ -72,7 +72,7 @@
                         }
                         catch (Exception ex)
                         {
-                            var kk = ex.ToString();
+                            logger.Error(ex, "Connectioon to Qlik websocket failed.");
                             return null;
                         }
                     },
@@ -186,7 +186,7 @@
         }
         #endregion
 
-        public void CopyFile(FileSettings settings, List<string> paths, string reportName)
+        public string CopyFile(FileSettings settings, List<string> paths, string reportName)
         {
             try
             {
@@ -195,14 +195,16 @@
                 var target = settings.Target?.ToLowerInvariant()?.Trim() ?? null;
                 if(target == null)
                 {
-                    logger.Error($"No target file path for report {reportName} found.");
-                    return;
+                    var message = $"No target file path for report {reportName} found.";
+                    logger.Error(message);
+                    return message;
                 }
 
                 if (!target.StartsWith("lib://"))
                 {
-                    logger.Error($"Target value \"{target}\" is not a lib:// folder.");
-                    return;
+                    var message = $"Target value \"{target}\" is not a lib:// folder.";
+                    logger.Error(message);
+                    return message;
                 }
 
                 string targetPath = String.Empty;
@@ -242,10 +244,12 @@
                             break;
                     }
                 }
+                return "OK";
             }
             catch (Exception ex)
             {
                 logger.Error(ex, "The copying process could not be execute.");
+                return ex.Message;
             }
         }
 
@@ -402,9 +406,10 @@
             }
         }
 
-        public void SendMails(List<MailSettings> settingsList)
+        public string SendMails(List<MailSettings> settingsList)
         {
             SmtpClient client = null;
+            var mailMessage = new MailMessage();
 
             try
             {
@@ -433,10 +438,7 @@
                     var toAddresses = report.Settings.To?.Split(';') ?? new string[0];
                     var ccAddresses = report.Settings.Cc?.Split(';') ?? new string[0];
                     var bccAddresses = report.Settings.Bcc?.Split(';') ?? new string[0];
-                    var mailMessage = new MailMessage()
-                    {
-                        Subject = report.Settings.Subject,
-                    };
+                    mailMessage.Subject = report.Settings.Subject;
                     var msgBody = report.Settings.Message.Trim();
                     switch (report.Settings.MailType)
                     {
@@ -456,7 +458,9 @@
                     mailMessage.Body = msgBody;
                     mailMessage.From = new MailAddress(report.ServerSettings.From);
                     foreach (var attach in report.ReportPaths)
+                    {
                         mailMessage.Attachments.Add(attach);
+                    }
 
                     foreach (var address in toAddresses)
                     {
@@ -483,14 +487,20 @@
                     logger.Debug("Send mail package...");
                     client.EnableSsl = report.ServerSettings.UseSsl;
                     client.Send(mailMessage);
+                    mailMessage.Dispose();
                     client.Dispose();
                 }
+
+                return "OK";
             }
             catch (Exception ex)
             {
+                if (mailMessage != null)
+                    mailMessage.Dispose();
                 if (client != null)
                     client.Dispose();
                 logger.Error(ex, "The reports could not be sent as mail.");
+                return ex.Message;
             }
         }
     }
