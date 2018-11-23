@@ -33,12 +33,13 @@
         #endregion
 
         #region Properties
-        public string OnDemandDownloadLink { get; set; }
         private static SerConnection GlobalConnection;
         private List<string> hubDeleteAll;
         private Dictionary<string, string> pathMapper;
+        private Session SocketSession;
         #endregion
 
+        #region Constructor
         public ExecuteManager()
         {
             hubDeleteAll = new List<string>();
@@ -47,6 +48,7 @@
             if (ServicePointManager.ServerCertificateValidationCallback == null)
                 ServicePointManager.ServerCertificateValidationCallback += ValidateRemoteCertificate;
         }
+        #endregion
 
         #region Private Methods
         private IDoc GetSessionAppConnection(Uri uri, Cookie cookie, string appId)
@@ -72,13 +74,13 @@
                         }
                         catch (Exception ex)
                         {
-                            var kk = ex.ToString();
+                            logger.Error(ex, "Connectioon to Qlik websocket failed.");
                             return null;
                         }
                     },
                 };
-                var session = Enigma.Create(config);
-                var globalTask = session.OpenAsync();
+                SocketSession = Enigma.Create(config);
+                var globalTask = SocketSession.OpenAsync();
                 globalTask.Wait();
                 IGlobal global = Impromptu.ActLike<IGlobal>(globalTask.Result);
                 var doc = global.OpenDocAsync(appId).Result;
@@ -111,14 +113,18 @@
                 if (libResult == null)
                 {
                     logger.Error($"No data connection with name {result.Item2} found.");
+                    SocketSession?.CloseAsync()?.Wait();
                     return null;
                 }
 
                 var libPath = libResult.qConnectionString.ToString();
-                return Path.Combine(libPath, libUri.LocalPath.Replace("/", "\\").Trim().Trim('\\'));
+                var resultPath = Path.Combine(libPath, libUri.LocalPath.Replace("/", "\\").Trim().Trim('\\'));
+                SocketSession?.CloseAsync()?.Wait();
+                return resultPath;
             }
             else
                 logger.Error("No data connections found.");
+            SocketSession?.CloseAsync()?.Wait();
             return null;
         }
 
@@ -186,8 +192,9 @@
         }
         #endregion
 
-        public void CopyFile(FileSettings settings, List<string> paths, string reportName)
+        public List<FileResult> CopyFile(FileSettings settings, List<string> paths, string reportName)
         {
+            var fileResults = new List<FileResult>();
             try
             {
                 var currentConnection = settings?.Connections?.FirstOrDefault();
@@ -195,14 +202,18 @@
                 var target = settings.Target?.ToLowerInvariant()?.Trim() ?? null;
                 if(target == null)
                 {
-                    logger.Error($"No target file path for report {reportName} found.");
-                    return;
+                    var message = $"No target file path for report {reportName} found.";
+                    logger.Error(message);
+                    fileResults.Add(new FileResult() { Success = false, Message = message, ReportName = reportName });
+                    return fileResults;
                 }
 
                 if (!target.StartsWith("lib://"))
                 {
-                    logger.Error($"Target value \"{target}\" is not a lib:// folder.");
-                    return;
+                    var message = $"Target value \"{target}\" is not a lib:// folder.";
+                    logger.Error(message);
+                    fileResults.Add(new FileResult() { Success = false, Message = message, ReportName = reportName });
+                    return fileResults;
                 }
 
                 string targetPath = String.Empty;
@@ -221,12 +232,12 @@
                 foreach (var path in paths)
                 {
                     var targetFile = Path.Combine(targetPath, $"{reportName}");
+                    logger.Debug($"copy mode {settings.Mode}");
                     switch (settings.Mode)
                     {
                         case DistributeMode.OVERRIDE:
                             Directory.CreateDirectory(targetPath);
                             File.Copy(path, targetFile, true);
-                            logger.Info($"file {targetFile} was copied");
                             break;
                         case DistributeMode.DELETEALLFIRST:
                             if (File.Exists(targetFile))
@@ -238,19 +249,24 @@
                             File.Copy(path, targetFile, false);
                             break;
                         default:
-                            logger.Error($"Unkown distribute mode {settings.Mode}");
-                            break;
+                            throw new Exception($"Unkown distribute mode {settings.Mode}");
                     }
+                    logger.Info($"file {targetFile} was copied - Mode {settings.Mode}");
+                    fileResults.Add(new FileResult() { Success = true, ReportName = reportName, Message = "File copy successfully.", CopyPath = targetFile });
                 }
+                return fileResults;
             }
             catch (Exception ex)
             {
                 logger.Error(ex, "The copying process could not be execute.");
+                fileResults.Add(new FileResult() { Success = false, Message = ex.Message, ReportName = reportName });
+                return fileResults;
             }
         }
 
-        public Task UploadToHub(HubSettings settings, List<string> paths, string reportName, bool ondemandMode)
+        public Task<HubResult> UploadToHub(HubSettings settings, List<string> paths, string reportName)
         {
+            var hubResult = new HubResult();
             try
             {
                 var currentConnection = settings?.Connections?.FirstOrDefault();
@@ -261,107 +277,115 @@
                 foreach (var path in paths)
                 {
                     var contentName = $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(path).TrimStart('.').ToUpperInvariant()})";
-                    var newPath = path;
-                    if (ondemandMode == true)
-                    {
-                        newPath = Path.Combine(Path.GetDirectoryName(path), reportName);
-                        if (!File.Exists(newPath))
-                            File.Move(path, newPath);
-                    }
-
                     if (hubDeleteAll.Contains(settings.Owner))
                         settings.Mode = DistributeMode.CREATEONLY;
 
-                    if (settings.Mode == DistributeMode.OVERRIDE || 
+                    if (settings.Mode == DistributeMode.OVERRIDE ||
                         settings.Mode == DistributeMode.CREATEONLY)
                     {
-                        HubInfo hubInfo = null;
-                        Guid? hubUserId = null;
-                        DomainUser hubUser = null;
-                        if (settings.Owner != null)
+                        return Task.Run<HubResult>(() =>
                         {
-                            hubUser = new DomainUser(settings.Owner);
-                            var filter = $"userId eq '{hubUser.UserId}' and userDirectory eq '{hubUser.UserDirectory}'";
-                            var result = hub.SendRequestAsync("user", HttpMethod.Get, null, filter).Result;
-                            if (result == null)
-                                throw new Exception($"Qlik user {settings.Owner} with qrs not found or session not connected.");
-                            var userObject = JArray.Parse(result);
-                            if (userObject.Count > 1)
-                                throw new Exception($"Too many User found. {result}");
-                            else if (userObject.Count == 1)
-                                hubUserId = new Guid(userObject.First()["id"].ToString());
-                        }
-
-                        var sharedContent = GetSharedContentFromUser(hub, contentName, hubUser);
-                        if (sharedContent == null)
-                        {
-                            var createRequest = new HubCreateRequest()
+                            var uploadResult = new HubResult()
                             {
-                                Name = contentName,
-                                ReportType = settings.SharedContentType,
-                                Description = "Created by Sense Excel Reporting",
-                                Data = new ContentData()
-                                {
-                                    ContentType = $"application/{Path.GetExtension(newPath).Trim('.')}",
-                                    ExternalPath = Path.GetFileName(newPath),
-                                    FileData = File.ReadAllBytes(newPath),
-                                }
+                                 ReportName = reportName,
                             };
 
-                            hubInfo = hub.CreateSharedContentAsync(createRequest).Result;
-                        }
-                        else
-                        {
-                            if (settings.Mode == DistributeMode.OVERRIDE)
+                            try
                             {
-                                var updateRequest = new HubUpdateRequest()
+                                HubInfo hubInfo = null;
+                                Guid? hubUserId = null;
+                                DomainUser hubUser = null;
+                                if (settings.Owner != null)
                                 {
-                                    Info = sharedContent,
-                                    Data = new ContentData()
+                                    hubUser = new DomainUser(settings.Owner);
+                                    var filter = $"userId eq '{hubUser.UserId}' and userDirectory eq '{hubUser.UserDirectory}'";
+                                    var result = hub.SendRequestAsync("user", HttpMethod.Get, null, filter).Result;
+                                    if (result == null)
+                                        throw new Exception($"Qlik user {settings.Owner} with qrs not found or session not connected.");
+                                    var userObject = JArray.Parse(result);
+                                    if (userObject.Count > 1)
+                                        throw new Exception($"Too many User found. {result}");
+                                    else if (userObject.Count == 1)
+                                        hubUserId = new Guid(userObject.First()["id"].ToString());
+                                }
+                                var sharedContent = GetSharedContentFromUser(hub, contentName, hubUser);
+                                if (sharedContent == null)
+                                {
+                                    var createRequest = new HubCreateRequest()
                                     {
-                                        ContentType = $"application/{Path.GetExtension(newPath).Trim('.')}",
-                                        ExternalPath = Path.GetFileName(newPath),
-                                        FileData = File.ReadAllBytes(newPath),
-                                    }
-                                };
-
-                                hubInfo = hub.UpdateSharedContentAsync(updateRequest).Result;
-                            }
-                            else
-                            {
-                                //create only mode not over give old report back
-                                hubInfo = sharedContent;
-                            }
-                        }
-
-                        if (ondemandMode)
-                        {
-                            hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
-                            OnDemandDownloadLink = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains("/ondemand."))?.ExternalPath ?? null;
-                        }
-
-                        if (hubUserId != null)
-                        {
-                            var newHubInfo = new HubInfo()
-                            {
-                                Id = hubInfo.Id,
-                                Type = settings.SharedContentType,
-                                Owner = new Owner()
-                                {
-                                    Id = hubUserId.ToString(),
-                                    UserId = hubUser.UserId,
-                                    UserDirectory = hubUser.UserDirectory,
-                                    Name = hubUser.UserId,
+                                        Name = contentName,
+                                        ReportType = settings.SharedContentType,
+                                        Description = "Created by Sense Excel Reporting",
+                                        Data = new ContentData()
+                                        {
+                                            ContentType = $"application/{Path.GetExtension(path).Trim('.')}",
+                                            ExternalPath = Path.GetFileName(path),
+                                            FileData = File.ReadAllBytes(path),
+                                        }
+                                    };
+                                    hubInfo = hub.CreateSharedContentAsync(createRequest).Result;
                                 }
-                            };
+                                else
+                                {
+                                    if (settings.Mode == DistributeMode.OVERRIDE)
+                                    {
+                                        var updateRequest = new HubUpdateRequest()
+                                        {
+                                            Info = sharedContent,
+                                            Data = new ContentData()
+                                            {
+                                                ContentType = $"application/{Path.GetExtension(path).Trim('.')}",
+                                                ExternalPath = Path.GetFileName(path),
+                                                FileData = File.ReadAllBytes(path),
+                                            }
+                                        };
+                                        hubInfo = hub.UpdateSharedContentAsync(updateRequest).Result;
+                                    }
+                                    else
+                                    {
+                                        //create only mode not over give old report back
+                                        hubInfo = sharedContent;
+                                    }
+                                }
 
-                            var changeRequest = new HubUpdateRequest()
+                                // get fresh shared content infos
+                                hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
+                                uploadResult.Link = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains("/ondemand."))?.ExternalPath ?? null;
+
+                                if (hubUserId != null)
+                                {
+                                    //change shared content owner
+                                    var newHubInfo = new HubInfo()
+                                    {
+                                        Id = hubInfo.Id,
+                                        Type = settings.SharedContentType,
+                                        Owner = new Owner()
+                                        {
+                                            Id = hubUserId.ToString(),
+                                            UserId = hubUser.UserId,
+                                            UserDirectory = hubUser.UserDirectory,
+                                            Name = hubUser.UserId,
+                                        }
+                                    };
+
+                                    var changeRequest = new HubUpdateRequest()
+                                    {
+                                        Info = newHubInfo,
+                                    };
+                                    hub.UpdateSharedContentAsync(changeRequest).Wait();
+                                }
+                                uploadResult.Message = "Upload successfully.";
+                                uploadResult.Success = true;
+                                return uploadResult;
+                            }
+                            catch (Exception ex)
                             {
-                                Info = newHubInfo,
-                            };
-
-                            return hub.UpdateSharedContentAsync(changeRequest);
-                        }
+                                logger.Error(ex, "The process could not be upload to the hub.");
+                                uploadResult.Success = false;
+                                uploadResult.Message = ex.Message;
+                                return uploadResult;
+                            }
+                        });
                     }
                     else if (settings.Mode == DistributeMode.DELETEALLFIRST)
                     {
@@ -386,25 +410,32 @@
 
                         settings.Mode = DistributeMode.CREATEONLY;
                         hubDeleteAll.Add(settings.Owner);
-                        UploadToHub(settings, paths, reportName, ondemandMode);
+                        UploadToHub(settings, paths, reportName);
                     }
                     else
                     {
                         throw new Exception($"Unknown hub mode {settings.Mode}");
                     }
                 }
-                return null;
+                hubResult.Success = true;
+                hubResult.Message = "No reports to upload.";
+                return Task.FromResult(hubResult);
             }
             catch (Exception ex)
             {
                 logger.Error(ex, "The process could not be upload to the hub.");
-                return null;
+                hubResult.Success = false;
+                hubResult.Message = ex.Message;
+                return Task.FromResult(hubResult);
             }
         }
 
-        public void SendMails(List<MailSettings> settingsList)
+        public List<MailResult> SendMails(List<MailSettings> settingsList)
         {
             SmtpClient client = null;
+            var mailMessage = new MailMessage();
+            var mailResults = new List<MailResult>();
+            var mailResult = new MailResult();
 
             try
             {
@@ -430,13 +461,11 @@
                 //send merged mail infos
                 foreach (var report in mailList)
                 {
+                    mailResult.ReportName = report?.Settings?.ReportName ?? null;
                     var toAddresses = report.Settings.To?.Split(';') ?? new string[0];
                     var ccAddresses = report.Settings.Cc?.Split(';') ?? new string[0];
                     var bccAddresses = report.Settings.Bcc?.Split(';') ?? new string[0];
-                    var mailMessage = new MailMessage()
-                    {
-                        Subject = report.Settings.Subject,
-                    };
+                    mailMessage.Subject = report.Settings.Subject;
                     var msgBody = report.Settings.Message.Trim();
                     switch (report.Settings.MailType)
                     {
@@ -456,7 +485,9 @@
                     mailMessage.Body = msgBody;
                     mailMessage.From = new MailAddress(report.ServerSettings.From);
                     foreach (var attach in report.ReportPaths)
+                    {
                         mailMessage.Attachments.Add(attach);
+                    }
 
                     foreach (var address in toAddresses)
                     {
@@ -483,14 +514,25 @@
                     logger.Debug("Send mail package...");
                     client.EnableSsl = report.ServerSettings.UseSsl;
                     client.Send(mailMessage);
+                    mailMessage.Dispose();
                     client.Dispose();
+                    mailResult.Success = true;
+                    mailResult.Message = "Mail sent successfully.";
+                    mailResults.Add(mailResult);
                 }
+                return mailResults;
             }
             catch (Exception ex)
             {
+                if (mailMessage != null)
+                    mailMessage.Dispose();
                 if (client != null)
                     client.Dispose();
                 logger.Error(ex, "The reports could not be sent as mail.");
+                mailResult.Success = false;
+                mailResult.Message = ex.Message;
+                mailResults.Add(mailResult);
+                return mailResults;
             }
         }
     }
