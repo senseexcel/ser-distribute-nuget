@@ -47,11 +47,12 @@
             }
         }
 
-        public string Run(string resultFolder, bool onDemand = false, string privateKeyPath = null)
+        public string Run(string resultFolder, string privateKeyPath = null)
         {
+            var results = new DistributeResults();
+
             try
             {
-                var resultMessage = "OK";
                 var execute = new ExecuteManager();
                 logger.Info("Read json result files...");
                 string[] jsonPaths = Directory.GetFiles(resultFolder, "*.json", SearchOption.TopDirectoryOnly);
@@ -72,7 +73,7 @@
                     }
 
                     var mailList = new List<MailSettings>();
-                    var uploadTasks = new List<Task>();
+                    var uploadTasks = new List<Task<HubResult>>();
                     foreach (var report in result.Reports)
                     {
                         var distribute = report?.Distribute ?? null;
@@ -91,13 +92,13 @@
                                         //copy reports
                                         logger.Info("Check - Copy Files...");
                                         var fileSettings = GetSettings<FileSettings>(location);
-                                        resultMessage = execute.CopyFile(fileSettings, report.Paths, report.Name);
+                                        results.FileResults.AddRange(execute.CopyFile(fileSettings, report.Paths, report.Name));
                                         break;
                                     case SettingsType.HUB:
                                         //upload to hub
                                         logger.Info("Check - Upload to hub...");
                                         var hubSettings = GetSettings<HubSettings>(location);
-                                        var task = execute.UploadToHub(hubSettings, report.Paths, report.Name, onDemand);
+                                        var task = execute.UploadToHub(hubSettings, report.Paths, report.Name);
                                         if (task != null)
                                             uploadTasks.Add(task);
                                         break;
@@ -120,18 +121,18 @@
                     //Wait for all upload tasks
                     Task.WaitAll(uploadTasks.ToArray());
 
+                    //Evaluation hub results
+                    foreach (var uploadTask in uploadTasks)
+                        results.HubResults.Add(uploadTask.Result);
+
                     //Send Mail 
                     if (mailList.Count > 0)
                     {
                         logger.Info("Check - Send Mails...");
-                        resultMessage = execute.SendMails(mailList);
+                        results.MailResults.AddRange(execute.SendMails(mailList));
                     }
                 }
-
-                if (onDemand)
-                    return execute.OnDemandDownloadLink;
-                else
-                    return resultMessage;
+                return JsonConvert.SerializeObject(results, Formatting.Indented);
             }
             catch (Exception ex)
             {
