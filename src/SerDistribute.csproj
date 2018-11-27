@@ -54,7 +54,7 @@
   </Target>
 
   <ItemGroup>
-    <PackageReference Include="enigma.net" Version="0.14.0-alpha0014" />
+    <PackageReference Include="enigma.net" Version="0.14.0-alpha0015" />
     <PackageReference Include="Markdig" Version="0.15.4" />
     <PackageReference Include="Microsoft.Extensions.PlatformAbstractions" Version="1.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />

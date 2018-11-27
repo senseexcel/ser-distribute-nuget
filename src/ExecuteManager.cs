@@ -349,8 +349,9 @@
                                 }
 
                                 // get fresh shared content infos
+                                var filename = Path.GetFileName(path);
                                 hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
-                                uploadResult.Link = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains("/ondemand."))?.ExternalPath ?? null;
+                                uploadResult.Link = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains($"/{filename}"))?.ExternalPath ?? null;
 
                                 if (hubUserId != null)
                                 {
