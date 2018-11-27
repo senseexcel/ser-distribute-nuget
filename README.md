@@ -1,6 +1,6 @@
 # ser-distribute
 [![CodeFactor](https://www.codefactor.io/repository/github/senseexcel/ser-distribute-nuget/badge)](https://www.codefactor.io/repository/github/senseexcel/ser-distribute-nuget)
-[![Nuget](https://img.shields.io/nuget/v/SerDistribute.svg)](https://www.nuget.org/packages/SerDistribute)
+[![Nuget](https://img.shields.io/nuget/v/Ser.Distribute.svg)](https://www.nuget.org/packages/Ser.Distribute)
 
 Distribution Service for Sense Excel Reporting Engine (File, Hub, Mail)
 
