@@ -348,11 +348,6 @@
                                     }
                                 }
 
-                                // get fresh shared content infos
-                                var filename = Path.GetFileName(path);
-                                hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
-                                uploadResult.Link = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains($"/{filename}"))?.ExternalPath ?? null;
-
                                 if (hubUserId != null)
                                 {
                                     //change shared content owner
@@ -375,7 +370,12 @@
                                     };
                                     hub.UpdateSharedContentAsync(changeRequest).Wait();
                                 }
-                                uploadResult.Message = "Upload successfully.";
+
+                                // get fresh shared content infos
+                                var filename = Path.GetFileName(path);
+                                hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
+                                uploadResult.Link = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains($"/{filename}"))?.ExternalPath ?? null;
+                                uploadResult.Message = $"Upload {contentName} successfully.";
                                 uploadResult.Success = true;
                                 return uploadResult;
                             }
@@ -411,16 +411,14 @@
 
                         settings.Mode = DistributeMode.CREATEONLY;
                         hubDeleteAll.Add(settings.Owner);
-                        UploadToHub(settings, paths, reportName);
+                        return UploadToHub(settings, paths, reportName);
                     }
                     else
                     {
                         throw new Exception($"Unknown hub mode {settings.Mode}");
                     }
                 }
-                hubResult.Success = true;
-                hubResult.Message = "No reports to upload.";
-                return Task.FromResult(hubResult);
+                return null;
             }
             catch (Exception ex)
             {
@@ -462,6 +460,7 @@
                 //send merged mail infos
                 foreach (var report in mailList)
                 {
+                    mailMessage = new MailMessage();
                     mailResult.ReportName = report?.Settings?.ReportName ?? null;
                     var toAddresses = report.Settings.To?.Split(';') ?? new string[0];
                     var ccAddresses = report.Settings.Cc?.Split(';') ?? new string[0];
@@ -515,6 +514,7 @@
                     logger.Debug("Send mail package...");
                     client.EnableSsl = report.ServerSettings.UseSsl;
                     client.Send(mailMessage);
+
                     mailMessage.Dispose();
                     client.Dispose();
                     mailResult.Success = true;
@@ -525,11 +525,11 @@
             }
             catch (Exception ex)
             {
+                logger.Error(ex, "The reports could not be sent as mail.");
                 if (mailMessage != null)
                     mailMessage.Dispose();
                 if (client != null)
                     client.Dispose();
-                logger.Error(ex, "The reports could not be sent as mail.");
                 mailResult.Success = false;
                 mailResult.Message = ex.Message;
                 mailResults.Add(mailResult);
