@@ -446,20 +446,24 @@
                         var result = mailList.SingleOrDefault(m => m.Settings.ToString() == mailSettings.ToString());
                         if (result == null)
                         {
+                            logger.Debug("Add report to mail");
                             var mailReport = new EMailReport(mailSettings, mailSettings.MailServer, mailSettings.ToString());
                             mailReport.AddReport(path, mailSettings.ReportName);
                             mailList.Add(mailReport);
                         }
                         else
                         {
+                            logger.Debug("Merge report to mail");
                             result.AddReport(path, mailSettings.ReportName);
                         }
                     }
                 }
 
                 //send merged mail infos
+                logger.Debug($"{mailList.Count} Mails to send.");
                 foreach (var report in mailList)
                 {
+                    mailResult = new MailResult();
                     mailMessage = new MailMessage();
                     mailResult.ReportName = report?.Settings?.ReportName ?? null;
                     var toAddresses = report.Settings.To?.Split(';') ?? new string[0];
@@ -518,14 +522,14 @@
                     mailMessage.Dispose();
                     client.Dispose();
                     mailResult.Success = true;
-                    mailResult.Message = "Mail sent successfully.";
+                    mailResult.Message = "Mail send successfully.";
                     mailResults.Add(mailResult);
                 }
                 return mailResults;
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "The reports could not be sent as mail.");
+                logger.Error(ex, "The reports could not be send as mail.");
                 if (mailMessage != null)
                     mailMessage.Dispose();
                 if (client != null)
