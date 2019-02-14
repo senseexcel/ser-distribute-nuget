@@ -47,34 +47,25 @@
             }
         }
 
-        public string Run(string resultFolder, string privateKeyPath = null)
+        public string Run(List<JobResult> jobResults, string privateKeyPath = null)
         {
             var results = new DistributeResults();
 
             try
             {
                 var execute = new ExecuteManager();
-                logger.Info("Read json result files...");
-                string[] jsonPaths = Directory.GetFiles(resultFolder, "*.json", SearchOption.TopDirectoryOnly);
-                foreach (var jsonPath in jsonPaths)
+                logger.Info("Read job results...");
+                foreach (var jobResult in jobResults)
                 {
-                    if (!File.Exists(jsonPath))
+                    if (jobResult.Status != TaskStatusInfo.SUCCESS)
                     {
-                        logger.Error($"The json result path \"{jsonPath}\" not found.");
-                        continue;
-                    }
-
-                    var json = File.ReadAllText(jsonPath);
-                    var result = JsonConvert.DeserializeObject<JobResult>(json);
-                    if (result.Status != TaskStatusInfo.SUCCESS)
-                    {
-                        logger.Warn($"The result \"{result.Status}\" of the report {jsonPath} is not correct. The report is ignored.");
+                        logger.Warn($"The result \"{jobResult.Status }\" of the report is not correct. The report is ignored.");
                         continue;
                     }
 
                     var mailList = new List<MailSettings>();
                     var uploadTasks = new List<Task<HubResult>>();
-                    foreach (var report in result.Reports)
+                    foreach (var report in jobResult.Reports)
                     {
                         var distribute = report?.Distribute ?? null;
                         var resolver = new CryptoResolver(privateKeyPath);
@@ -125,7 +116,7 @@
                     foreach (var uploadTask in uploadTasks)
                         results.HubResults.Add(uploadTask.Result);
 
-                    //Send Mail 
+                    //Send Mail
                     if (mailList.Count > 0)
                     {
                         logger.Info("Check - Send Mails...");
