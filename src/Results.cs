@@ -9,7 +9,7 @@
     using Newtonsoft.Json.Serialization;
     #endregion
 
-    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore, 
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,
                 NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class BaseResult
     {

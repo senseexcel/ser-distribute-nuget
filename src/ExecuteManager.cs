@@ -24,6 +24,7 @@
     using ImpromptuInterface;
     using System.Threading;
     using System.Net.WebSockets;
+    using Ser.Connections;
     #endregion
 
     public class ExecuteManager
@@ -33,10 +34,8 @@
         #endregion
 
         #region Properties
-        private static SerConnection GlobalConnection;
         private List<string> hubDeleteAll;
         private Dictionary<string, string> pathMapper;
-        private Session SocketSession;
         #endregion
 
         #region Constructor
@@ -46,86 +45,45 @@
             pathMapper = new Dictionary<string, string>();
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
             if (ServicePointManager.ServerCertificateValidationCallback == null)
-                ServicePointManager.ServerCertificateValidationCallback += ValidateRemoteCertificate;
+                ServicePointManager.ServerCertificateValidationCallback += ValidationCallback.ValidateRemoteCertificate;
         }
         #endregion
 
         #region Private Methods
-        private IDoc GetSessionAppConnection(Uri uri, Cookie cookie, string appId)
+        private string NormalizeLibPath(string path, FileSettings settings)
         {
             try
             {
-                var url = UriUtils.MakeWebSocketFromHttp(uri);
-                var connId = Guid.NewGuid().ToString();
-                url = $"{url}/app/engineData/identity/{connId}";
-                var config = new EnigmaConfigurations()
+                var qlikConnection = ConnectionManager.GetConnection(settings?.Connections);
+                var result = UriUtils.NormalizeUri(path);
+                var libUri = result.Item1;
+
+                var connections = qlikConnection?.CurrentApp?.GetConnectionsAsync().Result ?? null;
+                if (connections != null)
                 {
-                    Url = url,
-                    CreateSocket = async (Url) =>
+                    var libResult = connections.FirstOrDefault(n => n.qName.ToLowerInvariant() == result.Item2) ?? null;
+                    if (libResult == null)
                     {
-                        try
-                        {
-                            var webSocket = new ClientWebSocket();
-                            webSocket.Options.RemoteCertificateValidationCallback = ValidationCallback.ValidateRemoteCertificate;
-                            webSocket.Options.Cookies = new CookieContainer();
-                            webSocket.Options.Cookies.Add(cookie);
-                            await webSocket.ConnectAsync(new Uri(Url), CancellationToken.None);
-                            return webSocket;
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.Error(ex, "Connectioon to Qlik websocket failed.");
-                            return null;
-                        }
-                    },
-                };
-                SocketSession = Enigma.Create(config);
-                var globalTask = SocketSession.OpenAsync();
-                globalTask.Wait();
-                IGlobal global = Impromptu.ActLike<IGlobal>(globalTask.Result);
-                var doc = global.OpenDocAsync(appId).Result;
-                logger.Debug("websocket - success");
-                return doc;
+                        logger.Error($"No data connection with name {result.Item2} found.");
+                        qlikConnection?.Close();
+                        return null;
+                    }
+
+                    var libPath = libResult.qConnectionString.ToString();
+                    var resultPath = Path.Combine(libPath, libUri.LocalPath.Replace("/", "\\").Trim().Trim('\\'));
+                    qlikConnection?.Close();
+                    return resultPath;
+                }
+                else
+                    logger.Error("No data connections found.");
+                qlikConnection?.Close();
+                return null;
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "create websocket connection was failed.");
+                logger.Error(ex, "The lib path could not resolve.");
                 return null;
             }
-        }
-
-        private string NormalizeLibPath(string path, SerConnection settings)
-        {
-            var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            var cookie = new Cookie(settings.Credentials.Key, settings.Credentials.Value)
-            {
-                Secure = true,
-                Domain = settings.ServerUri.Host,
-                Path = "/",
-            };
-            var result = UriUtils.NormalizeUri(path);
-            var libUri = result.Item1;
-            var app = GetSessionAppConnection(settings.ServerUri, cookie, settings.App);
-            var connections = app?.GetConnectionsAsync().Result ?? null;
-            if (connections != null)
-            {
-                var libResult = connections.FirstOrDefault(n => n.qName.ToLowerInvariant() == result.Item2) ?? null;
-                if (libResult == null)
-                {
-                    logger.Error($"No data connection with name {result.Item2} found.");
-                    SocketSession?.CloseAsync()?.Wait();
-                    return null;
-                }
-
-                var libPath = libResult.qConnectionString.ToString();
-                var resultPath = Path.Combine(libPath, libUri.LocalPath.Replace("/", "\\").Trim().Trim('\\'));
-                SocketSession?.CloseAsync()?.Wait();
-                return resultPath;
-            }
-            else
-                logger.Error("No data connections found.");
-            SocketSession?.CloseAsync()?.Wait();
-            return null;
         }
 
         private HubInfo GetSharedContentFromUser(QlikQrsHub hub, string name, DomainUser hubUser)
@@ -143,7 +101,7 @@
 
             foreach (var sharedContent in sharedContentInfos)
             {
-                if(sharedContent.Owner.ToString() == hubUser.ToString())
+                if (sharedContent.Owner.ToString() == hubUser.ToString())
                 {
                     return sharedContent;
                 }
@@ -151,56 +109,19 @@
 
             return null;
         }
-
-        private static bool ValidateRemoteCertificate(object sender, X509Certificate cert, X509Chain chain,
-                                                      SslPolicyErrors error)
-        {
-            if (error == SslPolicyErrors.None)
-                return true;
-
-            if (!GlobalConnection?.SslVerify ?? true)
-                return true;
-
-            Uri requestUri = null;
-            if (sender is HttpRequestMessage hrm)
-                requestUri = hrm.RequestUri;
-            if (sender is HttpClient hc)
-                requestUri = hc.BaseAddress;
-            if (sender is HttpWebRequest hwr)
-                requestUri = hwr.Address;
-
-            if (requestUri != null)
-            {
-                var thumbprints = GlobalConnection.SslValidThumbprints ?? new List<SerThumbprint>();
-                foreach (var item in thumbprints)
-                {
-                    try
-                    {
-                        var uri = new Uri(item.Url);
-                        var thumbprint = item.Thumbprint.Replace(":", "").Replace(" ", "").ToLowerInvariant();
-                        if (thumbprint == cert.GetCertHashString().ToLowerInvariant() &&
-                           uri.Host.ToLowerInvariant() == requestUri.Host.ToLowerInvariant())
-                            return true;
-                    }
-                    catch
-                    {
-                    }
-                }
-            }
-
-            return false;
-        }
         #endregion
 
-        public List<FileResult> CopyFile(FileSettings settings, List<string> paths, string reportName)
+        public List<FileResult> CopyFile(FileSettings settings, List<JobResultFileData> fileDataList, Report report)
         {
             var fileResults = new List<FileResult>();
+            var reportName = report?.Name ?? null;
             try
             {
-                var currentConnection = settings?.Connections?.FirstOrDefault();
-                GlobalConnection = currentConnection ?? null;
+                if (String.IsNullOrEmpty(reportName))
+                    throw new Exception("The report filename is empty.");
+
                 var target = settings.Target?.ToLowerInvariant()?.Trim() ?? null;
-                if(target == null)
+                if (target == null)
                 {
                     var message = $"No target file path for report {reportName} found.";
                     logger.Error(message);
@@ -221,32 +142,33 @@
                     targetPath = pathMapper[target];
                 else
                 {
-                    targetPath = NormalizeLibPath(target, currentConnection);
+                    targetPath = NormalizeLibPath(target, settings);
                     if (targetPath == null)
                         throw new Exception("The could not resolved.");
                     pathMapper.Add(target, targetPath);
                 }
 
                 logger.Info($"Resolve target path: \"{targetPath}\".");
-
-                foreach (var path in paths)
+                foreach (var fileData in fileDataList)
                 {
-                    var targetFile = Path.Combine(targetPath, $"{reportName}");
+                    var targetFile = Path.Combine(targetPath, $"{fileData.Filename}");
                     logger.Debug($"copy mode {settings.Mode}");
                     switch (settings.Mode)
                     {
                         case DistributeMode.OVERRIDE:
                             Directory.CreateDirectory(targetPath);
-                            File.Copy(path, targetFile, true);
+                            File.WriteAllBytes(target, fileData.Data);
                             break;
                         case DistributeMode.DELETEALLFIRST:
                             if (File.Exists(targetFile))
                                 File.Delete(targetFile);
                             Directory.CreateDirectory(targetPath);
-                            File.Copy(path, targetFile, false);
+                            File.WriteAllBytes(target, fileData.Data);
                             break;
                         case DistributeMode.CREATEONLY:
-                            File.Copy(path, targetFile, false);
+                            if (File.Exists(targetFile))
+                                throw new Exception($"The file {targetFile} does not exist.");
+                            File.WriteAllBytes(target, fileData.Data);
                             break;
                         default:
                             throw new Exception($"Unkown distribute mode {settings.Mode}");
@@ -264,19 +186,23 @@
             }
         }
 
-        public Task<HubResult> UploadToHub(HubSettings settings, List<string> paths, string reportName)
+        public Task<HubResult> UploadToHub(HubSettings settings, List<JobResultFileData> fileDataList, Report report)
         {
             var hubResult = new HubResult();
+            var reportName = report?.Name ?? null;
+
             try
             {
-                var currentConnection = settings?.Connections?.FirstOrDefault();
-                GlobalConnection = currentConnection;
+                if (String.IsNullOrEmpty(reportName))
+                    throw new Exception("The report filename is empty.");
+
+                var hubConnection = ConnectionManager.GetConnection(settings?.Connections);
                 var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                var hub = new QlikQrsHub(currentConnection.ServerUri, new Cookie(currentConnection.Credentials.Key,
-                                                                                 currentConnection.Credentials.Value));
-                foreach (var path in paths)
+                var hubUri = QlikConnection.BuildQrsUri(hubConnection.ConnectUri, hubConnection.Config.ServerUri);
+                var hub = new QlikQrsHub(hubUri, hubConnection.ConnectCookie);
+                foreach (var fileData in fileDataList)
                 {
-                    var contentName = $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(path).TrimStart('.').ToUpperInvariant()})";
+                    var contentName = $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(fileData.Filename).TrimStart('.').ToUpperInvariant()})";
                     if (hubDeleteAll.Contains(settings.Owner))
                         settings.Mode = DistributeMode.CREATEONLY;
 
@@ -287,7 +213,7 @@
                         {
                             var uploadResult = new HubResult()
                             {
-                                 ReportName = reportName,
+                                ReportName = reportName,
                             };
 
                             try
@@ -318,9 +244,9 @@
                                         Description = "Created by Sense Excel Reporting",
                                         Data = new ContentData()
                                         {
-                                            ContentType = $"application/{Path.GetExtension(path).Trim('.')}",
-                                            ExternalPath = Path.GetFileName(path),
-                                            FileData = File.ReadAllBytes(path),
+                                            ContentType = $"application/{Path.GetExtension(fileData.Filename).Trim('.')}",
+                                            ExternalPath = Path.GetFileName(fileData.Filename),
+                                            FileData = fileData.Data,
                                         }
                                     };
                                     hubInfo = hub.CreateSharedContentAsync(createRequest).Result;
@@ -334,9 +260,9 @@
                                             Info = sharedContent,
                                             Data = new ContentData()
                                             {
-                                                ContentType = $"application/{Path.GetExtension(path).Trim('.')}",
-                                                ExternalPath = Path.GetFileName(path),
-                                                FileData = File.ReadAllBytes(path),
+                                                ContentType = $"application/{Path.GetExtension(fileData.Filename).Trim('.')}",
+                                                ExternalPath = Path.GetFileName(fileData.Filename),
+                                                FileData = fileData.Data,
                                             }
                                         };
                                         hubInfo = hub.UpdateSharedContentAsync(updateRequest).Result;
@@ -372,7 +298,7 @@
                                 }
 
                                 // get fresh shared content infos
-                                var filename = Path.GetFileName(path);
+                                var filename = Path.GetFileName(fileData.Filename);
                                 hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
                                 uploadResult.Link = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains($"/{filename}"))?.ExternalPath ?? null;
                                 uploadResult.Message = $"Upload {contentName} successfully.";
@@ -411,7 +337,7 @@
 
                         settings.Mode = DistributeMode.CREATEONLY;
                         hubDeleteAll.Add(settings.Owner);
-                        return UploadToHub(settings, paths, reportName);
+                        return UploadToHub(settings, fileDataList, report);
                     }
                     else
                     {
@@ -441,20 +367,21 @@
                 var mailList = new List<EMailReport>();
                 foreach (var mailSettings in settingsList)
                 {
-                    foreach (var path in mailSettings.Paths)
+                    var fileDataList = mailSettings.GetData();
+                    foreach (var fileData in fileDataList)
                     {
                         var result = mailList.SingleOrDefault(m => m.Settings.ToString() == mailSettings.ToString());
                         if (result == null)
                         {
                             logger.Debug("Add report to mail");
                             var mailReport = new EMailReport(mailSettings, mailSettings.MailServer, mailSettings.ToString());
-                            mailReport.AddReport(path, mailSettings.ReportName);
+                            mailReport.AddReport(fileData, mailSettings.ReportName);
                             mailList.Add(mailReport);
                         }
                         else
                         {
                             logger.Debug("Merge report to mail");
-                            result.AddReport(path, mailSettings.ReportName);
+                            result.AddReport(fileData, mailSettings.ReportName);
                         }
                     }
                 }

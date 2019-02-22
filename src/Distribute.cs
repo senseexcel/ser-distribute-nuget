@@ -47,6 +47,48 @@
             }
         }
 
+        public string Run(string resultFolder, string privateKeyPath = null)
+        {
+            try
+            {
+                logger.Info("Read json result files...");
+                var jobResults = new List<JobResult>();
+                string[] jsonPaths = Directory.GetFiles(resultFolder, "*.json", SearchOption.TopDirectoryOnly);
+                foreach (var jsonPath in jsonPaths)
+                {
+                    if (!File.Exists(jsonPath))
+                    {
+                        logger.Error($"The json result path \"{jsonPath}\" not found.");
+                        continue;
+                    }
+                    var json = File.ReadAllText(jsonPath);
+                    var result = JsonConvert.DeserializeObject<JobResult>(json);
+                    var fileDataList = new List<JobResultFileData>();
+                    foreach (var report in result.Reports)
+                    {
+                        foreach (var path in report.Paths)
+                        {
+                            var data = File.ReadAllBytes(path);
+                            var fileData = new JobResultFileData()
+                            {
+                                Filename = Path.GetFileName(path),
+                                Data = data
+                            };
+                            fileDataList.Add(fileData);
+                        }
+                    }
+                    result.SetData(fileDataList);
+                    jobResults.Add(result);
+                }
+                return Run(jobResults, privateKeyPath);
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Can´t read job results from path.");
+                return null;
+            }
+        }
+
         public string Run(List<JobResult> jobResults, string privateKeyPath = null)
         {
             var results = new DistributeResults();
@@ -80,24 +122,24 @@
                                 switch (settings.Type)
                                 {
                                     case SettingsType.FILE:
-                                        //copy reports
+                                        //Copy reports
                                         logger.Info("Check - Copy Files...");
                                         var fileSettings = GetSettings<FileSettings>(location);
-                                        results.FileResults.AddRange(execute.CopyFile(fileSettings, report.Paths, report.Name));
+                                        results.FileResults.AddRange(execute.CopyFile(fileSettings, jobResult.GetData(), report));
                                         break;
                                     case SettingsType.HUB:
-                                        //upload to hub
+                                        //Upload to hub
                                         logger.Info("Check - Upload to hub...");
                                         var hubSettings = GetSettings<HubSettings>(location);
-                                        var task = execute.UploadToHub(hubSettings, report.Paths, report.Name);
+                                        var task = execute.UploadToHub(hubSettings, jobResult.GetData(), report);
                                         if (task != null)
                                             uploadTasks.Add(task);
                                         break;
                                     case SettingsType.MAIL:
-                                        //cache mail infos
+                                        //Cache mail infos
                                         logger.Info("Check - Cache Mail...");
                                         var mailSettings = GetSettings<MailSettings>(location);
-                                        mailSettings.Paths = report.Paths;
+                                        mailSettings.SetData(jobResult.GetData());
                                         mailSettings.ReportName = report.Name;
                                         mailList.Add(mailSettings);
                                         break;
@@ -127,7 +169,7 @@
             }
             catch (Exception ex)
             {
-                logger.Error(ex);
+                logger.Error(ex, "Can´t read job results.");
                 return null;
             }
         }

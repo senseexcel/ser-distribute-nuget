@@ -63,4 +63,10 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-18618-05" PrivateAssets="All" />
     <PackageReference Include="GitVersionTask" Version="4.0.0" PrivateAssets="All" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="SerConnections">
+      <HintPath>..\..\ser-connections-nuget\src\bin\Debug\netcoreapp2.1\SerConnections.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 </Project>
