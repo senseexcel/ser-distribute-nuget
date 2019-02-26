@@ -5,6 +5,7 @@
     using Newtonsoft.Json.Linq;
     using NLog;
     using Ser.Api;
+    using Ser.Connections;
     using System;
     using System.Collections.Generic;
     using System.IO;
@@ -165,11 +166,15 @@
                         results.MailResults.AddRange(execute.SendMails(mailList));
                     }
                 }
+
+                ConnectionManager.MakeFree();
+                logger.Debug("Make connections free.");
                 return JsonConvert.SerializeObject(results, Formatting.Indented);
             }
             catch (Exception ex)
             {
                 logger.Error(ex, "Can´t read job results.");
+                ConnectionManager.MakeFree();
                 return null;
             }
         }
