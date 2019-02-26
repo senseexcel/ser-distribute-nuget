@@ -41,17 +41,8 @@
                 else
                     logger.Info($"The result folder is \"{resultFolder}\".");
 
-                var jobResults = new List<JobResult>();
-                string[] jsonPaths = Directory.GetFiles(resultFolder, "*.json", SearchOption.TopDirectoryOnly);
-                foreach (var jsonPath in jsonPaths)
-                {
-                    var jobResult = JsonConvert.DeserializeObject<JobResult>(jsonPath);
-                    jobResults.Add(jobResult);
-                }
-
                 var distribute = new Distribute();
-                distribute.Run(jobResults);
-
+                distribute.Run(resultFolder);
                 logger.Info("Finish");
                 Environment.ExitCode = 0;
             }

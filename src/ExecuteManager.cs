@@ -50,33 +50,29 @@
         #endregion
 
         #region Private Methods
-        private string NormalizeLibPath(string path, FileSettings settings)
+        private string NormalizeLibPath(string path, FileSettings settings, QlikConnection fileConnection)
         {
             try
             {
-                var qlikConnection = ConnectionManager.GetConnection(settings?.Connections);
                 var result = UriUtils.NormalizeUri(path);
                 var libUri = result.Item1;
 
-                var connections = qlikConnection?.CurrentApp?.GetConnectionsAsync().Result ?? null;
+                var connections = fileConnection?.CurrentApp?.GetConnectionsAsync().Result ?? null;
                 if (connections != null)
                 {
                     var libResult = connections.FirstOrDefault(n => n.qName.ToLowerInvariant() == result.Item2) ?? null;
                     if (libResult == null)
                     {
                         logger.Error($"No data connection with name {result.Item2} found.");
-                        qlikConnection?.Close();
                         return null;
                     }
 
                     var libPath = libResult.qConnectionString.ToString();
                     var resultPath = Path.Combine(libPath, libUri.LocalPath.Replace("/", "\\").Trim().Trim('\\'));
-                    qlikConnection?.Close();
                     return resultPath;
                 }
                 else
                     logger.Error("No data connections found.");
-                qlikConnection?.Close();
                 return null;
             }
             catch (Exception ex)
@@ -111,7 +107,7 @@
         }
         #endregion
 
-        public List<FileResult> CopyFile(FileSettings settings, List<JobResultFileData> fileDataList, Report report)
+        public List<FileResult> CopyFile(FileSettings settings, List<JobResultFileData> fileDataList, Report report, QlikConnection fileConnection)
         {
             var fileResults = new List<FileResult>();
             var reportName = report?.Name ?? null;
@@ -142,7 +138,7 @@
                     targetPath = pathMapper[target];
                 else
                 {
-                    targetPath = NormalizeLibPath(target, settings);
+                    targetPath = NormalizeLibPath(target, settings, fileConnection);
                     if (targetPath == null)
                         throw new Exception("The could not resolved.");
                     pathMapper.Add(target, targetPath);
@@ -184,9 +180,13 @@
                 fileResults.Add(new FileResult() { Success = false, Message = ex.Message, ReportName = reportName });
                 return fileResults;
             }
+            finally
+            {
+                fileConnection.IsFree = true;
+            }
         }
 
-        public Task<HubResult> UploadToHub(HubSettings settings, List<JobResultFileData> fileDataList, Report report)
+        public Task<HubResult> UploadToHub(HubSettings settings, List<JobResultFileData> fileDataList, Report report, QlikConnection hubConnection)
         {
             var hubResult = new HubResult();
             var reportName = report?.Name ?? null;
@@ -196,7 +196,6 @@
                 if (String.IsNullOrEmpty(reportName))
                     throw new Exception("The report filename is empty.");
 
-                var hubConnection = ConnectionManager.GetConnection(settings?.Connections);
                 var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                 var hubUri = QlikConnection.BuildQrsUri(hubConnection.ConnectUri, hubConnection.Config.ServerUri);
                 var hub = new QlikQrsHub(hubUri, hubConnection.ConnectCookie);
@@ -312,6 +311,10 @@
                                 uploadResult.Message = ex.Message;
                                 return uploadResult;
                             }
+                            finally
+                            {
+                                hubConnection.IsFree = true;
+                            }
                         });
                     }
                     else if (settings.Mode == DistributeMode.DELETEALLFIRST)
@@ -337,7 +340,7 @@
 
                         settings.Mode = DistributeMode.CREATEONLY;
                         hubDeleteAll.Add(settings.Owner);
-                        return UploadToHub(settings, fileDataList, report);
+                        return UploadToHub(settings, fileDataList, report, hubConnection);
                     }
                     else
                     {

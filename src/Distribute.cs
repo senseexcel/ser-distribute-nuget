@@ -113,7 +113,6 @@
                         var distribute = report?.Distribute ?? null;
                         var resolver = new CryptoResolver(privateKeyPath);
                         distribute = resolver.Resolve(distribute);
-
                         var locations = distribute?.Children().ToList() ?? new List<JToken>();
                         foreach (var location in locations)
                         {
@@ -126,13 +125,16 @@
                                         //Copy reports
                                         logger.Info("Check - Copy Files...");
                                         var fileSettings = GetSettings<FileSettings>(location);
-                                        results.FileResults.AddRange(execute.CopyFile(fileSettings, jobResult.GetData(), report));
+                                        var fileConnection = ConnectionManager.GetConnection(fileSettings?.Connections);
+                                        results.FileResults.AddRange(execute.CopyFile(fileSettings, jobResult.GetData(), report, fileConnection));
                                         break;
                                     case SettingsType.HUB:
                                         //Upload to hub
                                         logger.Info("Check - Upload to hub...");
                                         var hubSettings = GetSettings<HubSettings>(location);
-                                        var task = execute.UploadToHub(hubSettings, jobResult.GetData(), report);
+                                        ConnectionManager.LoadConnections(hubSettings?.Connections, 1);
+                                        var hubConnection = ConnectionManager.GetConnection(hubSettings?.Connections);
+                                        var task = execute.UploadToHub(hubSettings, jobResult.GetData(), report, hubConnection);
                                         if (task != null)
                                             uploadTasks.Add(task);
                                         break;
@@ -168,7 +170,6 @@
                 }
 
                 ConnectionManager.MakeFree();
-                logger.Debug("Make connections free.");
                 return JsonConvert.SerializeObject(results, Formatting.Indented);
             }
             catch (Exception ex)
