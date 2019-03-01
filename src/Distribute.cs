@@ -93,6 +93,7 @@
         public string Run(List<JobResult> jobResults, string privateKeyPath = null)
         {
             var results = new DistributeResults();
+            var connectionManager = new ConnectionManager();
 
             try
             {
@@ -125,15 +126,15 @@
                                         //Copy reports
                                         logger.Info("Check - Copy Files...");
                                         var fileSettings = GetSettings<FileSettings>(location);
-                                        var fileConnection = ConnectionManager.GetConnection(fileSettings?.Connections);
+                                        var fileConnection = connectionManager.GetConnection(fileSettings?.Connections);
                                         results.FileResults.AddRange(execute.CopyFile(fileSettings, jobResult.GetData(), report, fileConnection));
                                         break;
                                     case SettingsType.HUB:
                                         //Upload to hub
                                         logger.Info("Check - Upload to hub...");
                                         var hubSettings = GetSettings<HubSettings>(location);
-                                        ConnectionManager.LoadConnections(hubSettings?.Connections, 1);
-                                        var hubConnection = ConnectionManager.GetConnection(hubSettings?.Connections);
+                                        connectionManager.LoadConnections(hubSettings?.Connections, 1);
+                                        var hubConnection = connectionManager.GetConnection(hubSettings?.Connections);
                                         var task = execute.UploadToHub(hubSettings, jobResult.GetData(), report, hubConnection);
                                         if (task != null)
                                             uploadTasks.Add(task);
@@ -169,13 +170,13 @@
                     }
                 }
 
-                ConnectionManager.MakeFree();
+                connectionManager.MakeFree();
                 return JsonConvert.SerializeObject(results, Formatting.Indented);
             }
             catch (Exception ex)
             {
                 logger.Error(ex, "Can´t read job results.");
-                ConnectionManager.MakeFree();
+                connectionManager.MakeFree();
                 return null;
             }
         }
