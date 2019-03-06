@@ -16,7 +16,7 @@
   <ItemGroup>
     <Folder Include="Properties\" />
   </ItemGroup>
-  
+
   <Choose>
     <When Condition="'$(Configuration)' == 'Release'">
       <PropertyGroup>
@@ -26,6 +26,7 @@
         <PackageReference Include="Q2gHelperQrs" Version="1.3.0" />
         <PackageReference Include="SerApi" Version="3.4.2" />
         <PackageReference Include="Q2gHelperPem" Version="1.2.0" />
+        <PackageReference Include="Q2g.HelperQlik" Version="1.0.1" />
       </ItemGroup>
     </When>
     <Otherwise>
@@ -42,6 +43,9 @@
         <Reference Include="Q2gHelperPem">
           <HintPath>..\..\q2g-helper-pem-nuget\src\bin\Debug\$(TargetFramework)\Q2gHelperPem.dll</HintPath>
         </Reference>
+        <Reference Include="Q2g.HelperQlik">
+          <HintPath>..\..\q2g-helper-qlik-nuget\src\bin\Debug\$(TargetFramework)\Q2gHelperQlik.dll</HintPath>
+        </Reference>
       </ItemGroup>
     </Otherwise>
   </Choose>
@@ -55,12 +59,13 @@
 
   <ItemGroup>
     <PackageReference Include="enigma.net" Version="0.14.0-alpha0015" />
-    <PackageReference Include="Markdig" Version="0.15.5" />
+    <PackageReference Include="Markdig" Version="0.16.0" />
     <PackageReference Include="Microsoft.Extensions.PlatformAbstractions" Version="1.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
     <PackageReference Include="NLog" Version="4.5.11" />
-    <PackageReference Include="qlik-engineapi" Version="0.3.0-alpha0003" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta-63127-02" PrivateAssets="All" />
+    <PackageReference Include="qlik-engineapi" Version="0.3.0-alpha0015" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-18618-05" PrivateAssets="All" />
     <PackageReference Include="GitVersionTask" Version="4.0.0" PrivateAssets="All" />
   </ItemGroup>
+
 </Project>
