@@ -32,14 +32,4 @@
         }
         #endregion
     }
-
-    #region Helpers Class
-    public class JobResultFileData
-    {
-        #region Properties
-        public string Filename { get; set; }
-        public byte[] Data { get; set; }
-        #endregion
-    }
-    #endregion
 }
