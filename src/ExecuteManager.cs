@@ -1,30 +1,22 @@
 ﻿namespace Ser.Distribute
 {
     #region Usings
-    using System.Collections.Generic;
-    using System.IO;
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Linq;
-    using NLog;
     using System;
     using System.Linq;
     using System.Reflection;
-    using System.Text;
-    using System.Threading.Tasks;
-    using System.Net;
-    using Q2g.HelperQrs;
+    using System.Collections.Generic;
+    using System.IO;
     using System.Net.Mail;
     using System.Net.Http;
-    using System.Net.Security;
-    using System.Security.Cryptography.X509Certificates;
-    using Ser.Api;
+    using System.Threading.Tasks;
+    using System.Net;
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
+    using NLog;
     using Markdig;
-    using Qlik.EngineAPI;
-    using enigma;
-    using ImpromptuInterface;
-    using System.Threading;
-    using System.Net.WebSockets;
-    using Ser.Connections;
+    using Ser.Api;
+    using Q2g.HelperQrs;
+    using Q2g.HelperQlik;
     #endregion
 
     public class ExecuteManager
@@ -50,7 +42,7 @@
         #endregion
 
         #region Private Methods
-        private string NormalizeLibPath(string path, FileSettings settings, QlikConnection fileConnection)
+        private string NormalizeLibPath(string path, FileSettings settings, Q2g.HelperQlik.Connection fileConnection)
         {
             try
             {
@@ -107,7 +99,7 @@
         }
         #endregion
 
-        public List<FileResult> CopyFile(FileSettings settings, List<JobResultFileData> fileDataList, Report report, QlikConnection fileConnection)
+        public List<FileResult> CopyFile(FileSettings settings, List<JobResultFileData> fileDataList, Report report, Q2g.HelperQlik.Connection fileConnection)
         {
             var fileResults = new List<FileResult>();
             var reportName = report?.Name ?? null;
@@ -186,7 +178,7 @@
             }
         }
 
-        public Task<HubResult> UploadToHub(HubSettings settings, List<JobResultFileData> fileDataList, Report report, QlikConnection hubConnection)
+        public Task<HubResult> UploadToHub(HubSettings settings, List<JobResultFileData> fileDataList, Report report, Q2g.HelperQlik.Connection hubConnection)
         {
             var hubResult = new HubResult();
             var reportName = report?.Name ?? null;
@@ -197,7 +189,7 @@
                     throw new Exception("The report filename is empty.");
 
                 var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                var hubUri = QlikConnection.BuildQrsUri(hubConnection.ConnectUri, hubConnection.Config.ServerUri);
+                var hubUri = Q2g.HelperQlik.Connection.BuildQrsUri(hubConnection.ConnectUri, hubConnection.Config.ServerUri);
                 var hub = new QlikQrsHub(hubUri, hubConnection.ConnectCookie);
                 foreach (var fileData in fileDataList)
                 {

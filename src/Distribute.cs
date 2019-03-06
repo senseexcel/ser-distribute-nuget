@@ -1,17 +1,17 @@
 ﻿namespace Ser.Distribute
 {
     #region Usings
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Linq;
-    using NLog;
-    using Ser.Api;
-    using Ser.Connections;
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
+    using NLog;
+    using Ser.Api;
+    using Q2g.HelperQlik;
     #endregion
 
     public class Distribute
@@ -126,15 +126,17 @@
                                         //Copy reports
                                         logger.Info("Check - Copy Files...");
                                         var fileSettings = GetSettings<FileSettings>(location);
-                                        var fileConnection = connectionManager.GetConnection(fileSettings?.Connections);
+                                        var fileConnections = fileSettings?.Connections?.Cast<ConnectionConfig>()?.ToList() ?? new List<ConnectionConfig>();
+                                        var fileConnection = connectionManager.GetConnection(fileConnections);
                                         results.FileResults.AddRange(execute.CopyFile(fileSettings, jobResult.GetData(), report, fileConnection));
                                         break;
                                     case SettingsType.HUB:
                                         //Upload to hub
                                         logger.Info("Check - Upload to hub...");
                                         var hubSettings = GetSettings<HubSettings>(location);
-                                        connectionManager.LoadConnections(hubSettings?.Connections, 1);
-                                        var hubConnection = connectionManager.GetConnection(hubSettings?.Connections);
+                                        var hubConnections = hubSettings?.Connections?.Cast<ConnectionConfig>()?.ToList() ?? new List<ConnectionConfig>();
+                                        connectionManager.LoadConnections(hubConnections, 1);
+                                        var hubConnection = connectionManager.GetConnection(hubConnections);
                                         var task = execute.UploadToHub(hubSettings, jobResult.GetData(), report, hubConnection);
                                         if (task != null)
                                             uploadTasks.Add(task);
