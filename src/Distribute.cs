@@ -126,17 +126,17 @@
                                         //Copy reports
                                         logger.Info("Check - Copy Files...");
                                         var fileSettings = GetSettings<FileSettings>(location);
-                                        var fileConnections = fileSettings?.Connections?.Cast<ConnectionConfig>()?.ToList() ?? new List<ConnectionConfig>();
-                                        var fileConnection = connectionManager.GetConnection(fileConnections);
+                                        var fileConfigs = JsonConvert.DeserializeObject<List<ConnectionConfig>>(JsonConvert.SerializeObject(fileSettings?.Connections ?? new List<SerConnection>()));
+                                        var fileConnection = connectionManager.GetConnection(fileConfigs);
                                         results.FileResults.AddRange(execute.CopyFile(fileSettings, jobResult.GetData(), report, fileConnection));
                                         break;
                                     case SettingsType.HUB:
                                         //Upload to hub
                                         logger.Info("Check - Upload to hub...");
                                         var hubSettings = GetSettings<HubSettings>(location);
-                                        var hubConnections = hubSettings?.Connections?.Cast<ConnectionConfig>()?.ToList() ?? new List<ConnectionConfig>();
-                                        connectionManager.LoadConnections(hubConnections, 1);
-                                        var hubConnection = connectionManager.GetConnection(hubConnections);
+                                        var hubConfigs = JsonConvert.DeserializeObject<List<ConnectionConfig>>(JsonConvert.SerializeObject(hubSettings?.Connections ?? new List<SerConnection>()));
+                                        connectionManager.LoadConnections(hubConfigs, 1);
+                                        var hubConnection = connectionManager.GetConnection(hubConfigs);
                                         var task = execute.UploadToHub(hubSettings, jobResult.GetData(), report, hubConnection);
                                         if (task != null)
                                             uploadTasks.Add(task);
