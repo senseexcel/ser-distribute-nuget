@@ -1,5 +1,5 @@
 ﻿namespace Ser.Distribute
-{    
+{
     #region Usings
     using Ser.Api;
     using System;
@@ -30,11 +30,11 @@
         #endregion
 
         #region Methods
-        public void AddReport(string reportPath, string name)
+        public void AddReport(JobResultFileData fileData, string name)
         {
-            var attachment = new Attachment(reportPath)
+            var attachment = new Attachment(new MemoryStream(fileData.Data), name)
             {
-                Name = $"{name}{Path.GetExtension(reportPath)}",
+                Name = $"{name}{Path.GetExtension(fileData.Filename)}",
             };
 
             ReportPaths.Add(attachment);

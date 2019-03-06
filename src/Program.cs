@@ -43,7 +43,6 @@
 
                 var distribute = new Distribute();
                 distribute.Run(resultFolder);
-
                 logger.Info("Finish");
                 Environment.ExitCode = 0;
             }
