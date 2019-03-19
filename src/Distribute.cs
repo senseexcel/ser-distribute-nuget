@@ -12,6 +12,7 @@
     using NLog;
     using Ser.Api;
     using Q2g.HelperQlik;
+    using System.Threading;
     #endregion
 
     public class Distribute
@@ -90,7 +91,7 @@
             }
         }
 
-        public string Run(List<JobResult> jobResults, string privateKeyPath = null)
+        public string Run(List<JobResult> jobResults, string privateKeyPath = null, CancellationToken? token = null)
         {
             var results = new DistributeResults();
             var connectionManager = new ConnectionManager();
@@ -101,6 +102,9 @@
                 logger.Info("Read job results...");
                 foreach (var jobResult in jobResults)
                 {
+                    //Check Cancel
+                    token?.ThrowIfCancellationRequested();
+
                     if (jobResult.Status != TaskStatusInfo.SUCCESS)
                     {
                         logger.Warn($"The result \"{jobResult.Status }\" of the report is not correct. The report is ignored.");
@@ -111,12 +115,18 @@
                     var uploadTasks = new List<Task<HubResult>>();
                     foreach (var report in jobResult.Reports)
                     {
+                        //Check Cancel
+                        token?.ThrowIfCancellationRequested();
+
                         var distribute = report?.Distribute ?? null;
                         var resolver = new CryptoResolver(privateKeyPath);
                         distribute = resolver.Resolve(distribute);
                         var locations = distribute?.Children().ToList() ?? new List<JToken>();
                         foreach (var location in locations)
                         {
+                            //Check Cancel
+                            token?.ThrowIfCancellationRequested();
+
                             var settings = GetSettings<BaseDeliverySettings>(location, true);
                             if (settings.Active ?? true)
                             {
@@ -175,11 +185,19 @@
                 connectionManager.MakeFree();
                 return JsonConvert.SerializeObject(results, Formatting.Indented);
             }
+            catch (OperationCanceledException ex)
+            {
+                logger.Error(ex, "Distibute was canceled.");
+                return null;
+            }
             catch (Exception ex)
             {
                 logger.Error(ex, "Can´t read job results.");
-                connectionManager.MakeFree();
                 return null;
+            }
+            finally
+            {
+                connectionManager.MakeFree();
             }
         }
     }
