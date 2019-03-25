@@ -137,26 +137,27 @@
                 }
 
                 logger.Info($"Resolve target path: \"{targetPath}\".");
-                foreach (var fileData in fileDataList)
+                foreach (var reportPath in report.Paths)
                 {
+                    var fileData = fileDataList.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
                     var targetFile = Path.Combine(targetPath, $"{fileData.Filename}");
                     logger.Debug($"copy mode {settings.Mode}");
                     switch (settings.Mode)
                     {
                         case DistributeMode.OVERRIDE:
                             Directory.CreateDirectory(targetPath);
-                            File.WriteAllBytes(target, fileData.Data);
+                            File.WriteAllBytes(targetFile, fileData.Data);
                             break;
                         case DistributeMode.DELETEALLFIRST:
                             if (File.Exists(targetFile))
                                 File.Delete(targetFile);
                             Directory.CreateDirectory(targetPath);
-                            File.WriteAllBytes(target, fileData.Data);
+                            File.WriteAllBytes(targetFile, fileData.Data);
                             break;
                         case DistributeMode.CREATEONLY:
                             if (File.Exists(targetFile))
                                 throw new Exception($"The file {targetFile} does not exist.");
-                            File.WriteAllBytes(target, fileData.Data);
+                            File.WriteAllBytes(targetFile, fileData.Data);
                             break;
                         default:
                             throw new Exception($"Unkown distribute mode {settings.Mode}");
@@ -191,8 +192,9 @@
                 var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                 var hubUri = Q2g.HelperQlik.Connection.BuildQrsUri(hubConnection.ConnectUri, hubConnection.Config.ServerUri);
                 var hub = new QlikQrsHub(hubUri, hubConnection.ConnectCookie);
-                foreach (var fileData in fileDataList)
+                foreach (var reportPath in report.Paths)
                 {
+                    var fileData = fileDataList.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
                     var contentName = $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(fileData.Filename).TrimStart('.').ToUpperInvariant()})";
                     if (hubDeleteAll.Contains(settings.Owner))
                         settings.Mode = DistributeMode.CREATEONLY;
