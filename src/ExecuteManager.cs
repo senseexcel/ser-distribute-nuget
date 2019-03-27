@@ -140,7 +140,7 @@
                 foreach (var reportPath in report.Paths)
                 {
                     var fileData = fileDataList.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
-                    var targetFile = Path.Combine(targetPath, $"{fileData.Filename}");
+                    var targetFile = Path.Combine(targetPath, reportName);
                     logger.Debug($"copy mode {settings.Mode}");
                     switch (settings.Mode)
                     {
