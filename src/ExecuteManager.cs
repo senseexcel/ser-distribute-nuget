@@ -137,10 +137,15 @@
                 }
 
                 logger.Info($"Resolve target path: \"{targetPath}\".");
+                var fileCount = 0;
                 foreach (var reportPath in report.Paths)
                 {
+                    if (report.Paths.Count > 1)
+                        fileCount++;
                     var fileData = fileDataList.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
                     var targetFile = Path.Combine(targetPath, reportName);
+                    if (fileCount > 0)
+                        targetFile = Path.Combine(targetPath, $"{Path.GetFileNameWithoutExtension(reportName)}_{fileCount}{Path.GetExtension(reportName)}");
                     logger.Debug($"copy mode {settings.Mode}");
                     switch (settings.Mode)
                     {
