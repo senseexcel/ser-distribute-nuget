@@ -143,9 +143,9 @@
                     if (report.Paths.Count > 1)
                         fileCount++;
                     var fileData = fileDataList.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
-                    var targetFile = Path.Combine(targetPath, reportName);
+                    var targetFile = Path.Combine(targetPath, $"{reportName}{Path.GetExtension(reportPath)}");
                     if (fileCount > 0)
-                        targetFile = Path.Combine(targetPath, $"{Path.GetFileNameWithoutExtension(reportName)}_{fileCount}{Path.GetExtension(reportName)}");
+                        targetFile = Path.Combine(targetPath, $"{reportName}_{fileCount}{Path.GetExtension(reportPath)}");
                     logger.Debug($"copy mode {settings.Mode}");
                     switch (settings.Mode)
                     {
