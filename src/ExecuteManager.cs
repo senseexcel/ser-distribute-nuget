@@ -370,8 +370,9 @@
                 foreach (var mailSettings in settingsList)
                 {
                     var fileDataList = mailSettings.GetData();
-                    foreach (var fileData in fileDataList)
+                    foreach (var path in mailSettings.Paths)
                     {
+                        var fileData = fileDataList.FirstOrDefault(f => Path.GetFileName(path) == f.Filename);
                         var result = mailList.SingleOrDefault(m => m.Settings.ToString() == mailSettings.ToString());
                         if (result == null)
                         {
