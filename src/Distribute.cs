@@ -157,6 +157,7 @@
                                         var mailSettings = GetSettings<MailSettings>(location);
                                         mailSettings.SetData(jobResult.GetData());
                                         mailSettings.ReportName = report.Name;
+                                        mailSettings.Paths = report?.Paths;
                                         mailList.Add(mailSettings);
                                         break;
                                     default:
