@@ -132,7 +132,7 @@
                 {
                     targetPath = NormalizeLibPath(target, settings, fileConnection);
                     if (targetPath == null)
-                        throw new Exception("The could not resolved.");
+                        throw new Exception("The lib path could not be resolved.");
                     pathMapper.Add(target, targetPath);
                 }
 
@@ -168,7 +168,7 @@
                             throw new Exception($"Unkown distribute mode {settings.Mode}");
                     }
                     logger.Info($"file {targetFile} was copied - Mode {settings.Mode}");
-                    fileResults.Add(new FileResult() { Success = true, ReportName = reportName, Message = "File copy successfully.", CopyPath = targetFile });
+                    fileResults.Add(new FileResult() { Success = true, ReportName = reportName, Message = "File copy successful.", CopyPath = targetFile });
                 }
                 return fileResults;
             }
@@ -299,7 +299,7 @@
                                 var filename = Path.GetFileName(fileData.Filename);
                                 hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
                                 uploadResult.Link = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains($"/{filename}"))?.ExternalPath ?? null;
-                                uploadResult.Message = $"Upload {contentName} successfully.";
+                                uploadResult.Message = $"Upload {contentName} successful.";
                                 uploadResult.Success = true;
                                 return uploadResult;
                             }
@@ -452,14 +452,14 @@
                     mailMessage.Dispose();
                     client.Dispose();
                     mailResult.Success = true;
-                    mailResult.Message = "Mail send successfully.";
+                    mailResult.Message = "Mail sent successful.";
                     mailResults.Add(mailResult);
                 }
                 return mailResults;
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "The reports could not be send as mail.");
+                logger.Error(ex, "The reports could not be sent as mail.");
                 if (mailMessage != null)
                     mailMessage.Dispose();
                 if (client != null)
