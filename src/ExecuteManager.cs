@@ -26,14 +26,14 @@
         #endregion
 
         #region Properties
-        private List<string> hubDeleteAll;
+        private bool deleteFirst;
         private Dictionary<string, string> pathMapper;
         #endregion
 
         #region Constructor
         public ExecuteManager()
         {
-            hubDeleteAll = new List<string>();
+            deleteFirst = false;
             pathMapper = new Dictionary<string, string>();
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
             if (ServicePointManager.ServerCertificateValidationCallback == null)
@@ -96,6 +96,16 @@
             }
 
             return null;
+        }
+
+        private JobResultFileData GetFileData(List<JobResultFileData> fileDataList, string reportPath)
+        {
+            return fileDataList.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
+        }
+
+        private string GetContentName(string reportName, JobResultFileData fileData)
+        {
+            return $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(fileData.Filename).TrimStart('.').ToUpperInvariant()})";
         }
         #endregion
 
@@ -184,6 +194,51 @@
             }
         }
 
+        public void DeleteReportsFromHub(HubSettings settings, IList<Report> reports, List<JobResultFileData> fileDataList, Q2g.HelperQlik.Connection hubConnection)
+        {
+            try
+            {
+                if (deleteFirst)
+                {
+                    settings.Mode = DistributeMode.CREATEONLY;
+                    return;
+                }
+
+                var hubUser = new DomainUser(settings.Owner);
+                var hubUri = Q2g.HelperQlik.Connection.BuildQrsUri(hubConnection.ConnectUri, hubConnection.Config.ServerUri);
+                var hub = new QlikQrsHub(hubUri, hubConnection.ConnectCookie);
+                var sharedContentInfos = hub.GetSharedContentAsync(new HubSelectRequest())?.Result;
+                if (sharedContentInfos == null)
+                    logger.Debug("No shared content found.");
+
+                foreach (var report in reports)
+                {
+                    foreach (var reportPath in report.Paths)
+                    {
+                        var fileData = GetFileData(fileDataList, reportPath);
+                        var contentName = GetContentName(report?.Name ?? null, fileData);
+                        var sharedContentList = sharedContentInfos.Where(s => s.Name == contentName).ToList();
+                        foreach (var sharedContent in sharedContentList)
+                        {
+                            var serMetaType = sharedContent.MetaData.Where(m => m.Key == "ser-type" && m.Value == "report").SingleOrDefault() ?? null;
+                            if (sharedContent.MetaData == null)
+                                serMetaType = new MetaData();
+
+                            if (serMetaType != null && sharedContent.Owner.ToString() == hubUser.ToString())
+                                hub.DeleteSharedContentAsync(new HubDeleteRequest() { Id = sharedContent.Id.Value }).Wait();
+                        }
+                    }
+                }
+
+                deleteFirst = true;
+                settings.Mode = DistributeMode.CREATEONLY;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "Reports could not delete");
+            }
+        }
+
         public Task<HubResult> UploadToHub(HubSettings settings, List<JobResultFileData> fileDataList, Report report, Q2g.HelperQlik.Connection hubConnection)
         {
             var hubResult = new HubResult();
@@ -194,15 +249,12 @@
                 if (String.IsNullOrEmpty(reportName))
                     throw new Exception("The report filename is empty.");
 
-                var workDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                 var hubUri = Q2g.HelperQlik.Connection.BuildQrsUri(hubConnection.ConnectUri, hubConnection.Config.ServerUri);
                 var hub = new QlikQrsHub(hubUri, hubConnection.ConnectCookie);
                 foreach (var reportPath in report.Paths)
                 {
-                    var fileData = fileDataList.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
-                    var contentName = $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(fileData.Filename).TrimStart('.').ToUpperInvariant()})";
-                    if (hubDeleteAll.Contains(settings.Owner))
-                        settings.Mode = DistributeMode.CREATEONLY;
+                    var fileData = GetFileData(fileDataList, reportPath);
+                    var contentName = GetContentName(reportName, fileData);
 
                     if (settings.Mode == DistributeMode.OVERRIDE ||
                         settings.Mode == DistributeMode.CREATEONLY)
@@ -267,8 +319,7 @@
                                     }
                                     else
                                     {
-                                        //create only mode not over give old report back
-                                        hubInfo = sharedContent;
+                                        throw new Exception($"The shared content {contentName} already exist.");
                                     }
                                 }
 
@@ -315,31 +366,6 @@
                                 hubConnection.IsFree = true;
                             }
                         });
-                    }
-                    else if (settings.Mode == DistributeMode.DELETEALLFIRST)
-                    {
-                        var hubUser = new DomainUser(settings.Owner);
-                        var hubRequest = new HubSelectRequest()
-                        {
-                            Filter = HubSelectRequest.GetNameFilter(contentName),
-                        };
-                        var sharedContentInfos = hub.GetSharedContentAsync(new HubSelectRequest())?.Result;
-                        if (sharedContentInfos == null)
-                            return null;
-
-                        foreach (var sharedContent in sharedContentInfos)
-                        {
-                            var serMetaType = sharedContent.MetaData.Where(m => m.Key == "ser-type" && m.Value == "report").SingleOrDefault() ?? null;
-                            if (sharedContent.MetaData == null)
-                                serMetaType = new MetaData();
-
-                            if (serMetaType != null && sharedContent.Owner.ToString() == hubUser.ToString())
-                                hub.DeleteSharedContentAsync(new HubDeleteRequest() { Id = sharedContent.Id.Value }).Wait();
-                        }
-
-                        settings.Mode = DistributeMode.CREATEONLY;
-                        hubDeleteAll.Add(settings.Owner);
-                        return UploadToHub(settings, fileDataList, report, hubConnection);
                     }
                     else
                     {
