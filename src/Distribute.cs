@@ -147,6 +147,8 @@
                                         var hubConfigs = JsonConvert.DeserializeObject<List<ConnectionConfig>>(JsonConvert.SerializeObject(hubSettings?.Connections ?? new List<SerConnection>()));
                                         connectionManager.LoadConnections(hubConfigs, 1);
                                         var hubConnection = connectionManager.GetConnection(hubConfigs);
+                                        if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
+                                            execute.DeleteReportsFromHub(hubSettings, jobResult.Reports, jobResult.GetData(), hubConnection);
                                         var task = execute.UploadToHub(hubSettings, jobResult.GetData(), report, hubConnection);
                                         if (task != null)
                                             uploadTasks.Add(task);
