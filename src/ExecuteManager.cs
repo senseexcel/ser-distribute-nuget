@@ -292,6 +292,7 @@
                                         Name = contentName,
                                         ReportType = settings.SharedContentType,
                                         Description = "Created by Sense Excel Reporting",
+                                        Tags = new List<string>() { "SER" },
                                         Data = new ContentData()
                                         {
                                             ContentType = $"application/{Path.GetExtension(fileData.Filename).Trim('.')}",
