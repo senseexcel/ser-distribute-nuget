@@ -26,7 +26,7 @@
         #endregion
 
         #region Properties
-        private bool deleteFirst;
+        public bool deleteFirst;
         private Dictionary<string, string> pathMapper;
         #endregion
 
@@ -98,9 +98,9 @@
             return null;
         }
 
-        private JobResultFileData GetFileData(List<JobResultFileData> fileDataList, string reportPath)
+        private JobResultFileData GetFileData(List<JobResultFileData> fileDataList, string reportPath, Guid taskId)
         {
-            return fileDataList.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
+            return fileDataList.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath) && f.TaskId == taskId);
         }
 
         private string GetContentName(string reportName, JobResultFileData fileData)
@@ -194,7 +194,7 @@
             }
         }
 
-        public void DeleteReportsFromHub(HubSettings settings, IList<Report> reports, List<JobResultFileData> fileDataList, Q2g.HelperQlik.Connection hubConnection)
+        public void DeleteReportsFromHub(HubSettings settings, JobResult jobResult, List<JobResultFileData> fileDataList, Q2g.HelperQlik.Connection hubConnection)
         {
             try
             {
@@ -211,11 +211,11 @@
                 if (sharedContentInfos == null)
                     logger.Debug("No shared content found.");
 
-                foreach (var report in reports)
+                foreach (var report in jobResult.Reports)
                 {
                     foreach (var reportPath in report.Paths)
                     {
-                        var fileData = GetFileData(fileDataList, reportPath);
+                        var fileData = GetFileData(fileDataList, reportPath, jobResult.TaskId);
                         var contentName = GetContentName(report?.Name ?? null, fileData);
                         var sharedContentList = sharedContentInfos.Where(s => s.Name == contentName).ToList();
                         foreach (var sharedContent in sharedContentList)
@@ -239,7 +239,7 @@
             }
         }
 
-        public Task<HubResult> UploadToHub(HubSettings settings, List<JobResultFileData> fileDataList, Report report, Q2g.HelperQlik.Connection hubConnection)
+        public Task<HubResult> UploadToHub(HubSettings settings, List<JobResultFileData> fileDataList, Report report, Q2g.HelperQlik.Connection hubConnection, Guid taskId)
         {
             var hubResult = new HubResult();
             var reportName = report?.Name ?? null;
@@ -253,7 +253,7 @@
                 var hub = new QlikQrsHub(hubUri, hubConnection.ConnectCookie);
                 foreach (var reportPath in report.Paths)
                 {
-                    var fileData = GetFileData(fileDataList, reportPath);
+                    var fileData = GetFileData(fileDataList, reportPath, taskId);
                     var contentName = GetContentName(reportName, fileData);
 
                     if (settings.Mode == DistributeMode.OVERRIDE ||
