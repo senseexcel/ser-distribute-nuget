@@ -9,6 +9,7 @@
     public class JobResultFileData
     {
         #region Properties
+        public Guid TaskId { get; set; }
         public string Filename { get; set; }
         public byte[] Data { get; set; }
         #endregion

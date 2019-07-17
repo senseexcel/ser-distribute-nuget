@@ -111,6 +111,7 @@
                         continue;
                     }
 
+                    execute.deleteFirst = false;
                     var mailList = new List<MailSettings>();
                     var uploadTasks = new List<Task<HubResult>>();
                     foreach (var report in jobResult.Reports)
@@ -148,8 +149,8 @@
                                         connectionManager.LoadConnections(hubConfigs, 1);
                                         var hubConnection = connectionManager.GetConnection(hubConfigs);
                                         if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
-                                            execute.DeleteReportsFromHub(hubSettings, jobResult.Reports, jobResult.GetData(), hubConnection);
-                                        var task = execute.UploadToHub(hubSettings, jobResult.GetData(), report, hubConnection);
+                                            execute.DeleteReportsFromHub(hubSettings, jobResult, jobResult.GetData(), hubConnection);
+                                        var task = execute.UploadToHub(hubSettings, jobResult.GetData(), report, hubConnection, jobResult.TaskId);
                                         if (task != null)
                                             uploadTasks.Add(task);
                                         break;
