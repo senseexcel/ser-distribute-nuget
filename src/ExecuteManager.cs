@@ -445,9 +445,12 @@
                     }
                     mailMessage.Body = msgBody;
                     mailMessage.From = new MailAddress(report.ServerSettings.From);
-                    foreach (var attach in report.ReportPaths)
+                    if (report.Settings.SendAttachment)
                     {
-                        mailMessage.Attachments.Add(attach);
+                        foreach (var attach in report.ReportPaths)
+                        {
+                            mailMessage.Attachments.Add(attach);
+                        }
                     }
 
                     foreach (var address in toAddresses)
