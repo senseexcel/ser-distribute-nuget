@@ -292,7 +292,13 @@
                                         Name = contentName,
                                         ReportType = settings.SharedContentType,
                                         Description = "Created by Sense Excel Reporting",
-                                        Tags = new List<string>() { "SER" },
+                                        Tags = new List<Tag>() { new Tag() 
+                                            { 
+                                                 Name = "SER",
+                                                 CreatedDate = DateTime.Now,
+                                                 ModifiedDate = DateTime.Now
+                                            } 
+                                        },
                                         Data = new ContentData()
                                         {
                                             ContentType = $"application/{Path.GetExtension(fileData.Filename).Trim('.')}",
@@ -306,6 +312,12 @@
                                 {
                                     if (settings.Mode == DistributeMode.OVERRIDE)
                                     {
+                                        var tag = sharedContent?.Tags?.FirstOrDefault(t => t.Name == "SER") ?? null;
+                                        if (tag != null)
+                                        {
+                                            tag.CreatedDate = DateTime.Now;
+                                            tag.ModifiedDate = DateTime.Now;
+                                        }
                                         var updateRequest = new HubUpdateRequest()
                                         {
                                             Info = sharedContent,
