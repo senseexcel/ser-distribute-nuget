@@ -118,7 +118,7 @@
                 if (String.IsNullOrEmpty(reportName))
                     throw new Exception("The report filename is empty.");
 
-                var target = settings.Target?.ToLowerInvariant()?.Trim() ?? null;
+                var target = settings?.Target?.Trim() ?? null;
                 if (target == null)
                 {
                     var message = $"No target file path for report {reportName} found.";
@@ -127,7 +127,7 @@
                     return fileResults;
                 }
 
-                if (!target.StartsWith("lib://"))
+                if (!target.ToLowerInvariant().StartsWith("lib://"))
                 {
                     var message = $"Target value \"{target}\" is not a lib:// folder.";
                     logger.Error(message);
