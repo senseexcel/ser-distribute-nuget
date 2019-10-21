@@ -483,10 +483,11 @@
                             mailMessage.Bcc.Add(address);
                     }
 
-                    client = new SmtpClient(report.ServerSettings.Host, report.ServerSettings.Port)
-                    {
-                        Credentials = new NetworkCredential(report.ServerSettings.Username, report.ServerSettings.Password),
-                    };
+                    client = new SmtpClient(report.ServerSettings.Host, report.ServerSettings.Port);
+
+                    if (!String.IsNullOrEmpty(report.ServerSettings.Username) && !String.IsNullOrEmpty(report.ServerSettings.Password))
+                        client.Credentials = new NetworkCredential(report.ServerSettings.Username, report.ServerSettings.Password);
+
                     logger.Debug("Send mail package...");
                     client.EnableSsl = report.ServerSettings.UseSsl;
                     client.Send(mailMessage);
