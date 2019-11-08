@@ -118,7 +118,7 @@
                 if (String.IsNullOrEmpty(reportName))
                     throw new Exception("The report filename is empty.");
 
-                var target = settings.Target?.ToLowerInvariant()?.Trim() ?? null;
+                var target = settings?.Target?.Trim() ?? null;
                 if (target == null)
                 {
                     var message = $"No target file path for report {reportName} found.";
@@ -127,7 +127,7 @@
                     return fileResults;
                 }
 
-                if (!target.StartsWith("lib://"))
+                if (!target.ToLowerInvariant().StartsWith("lib://"))
                 {
                     var message = $"Target value \"{target}\" is not a lib:// folder.";
                     logger.Error(message);
@@ -292,7 +292,13 @@
                                         Name = contentName,
                                         ReportType = settings.SharedContentType,
                                         Description = "Created by Sense Excel Reporting",
-                                        Tags = new List<string>() { "SER" },
+                                        Tags = new List<Tag>() { new Tag() 
+                                            { 
+                                                 Name = "SER",
+                                                 CreatedDate = DateTime.Now,
+                                                 ModifiedDate = DateTime.Now
+                                            } 
+                                        },
                                         Data = new ContentData()
                                         {
                                             ContentType = $"application/{Path.GetExtension(fileData.Filename).Trim('.')}",
@@ -306,6 +312,12 @@
                                 {
                                     if (settings.Mode == DistributeMode.OVERRIDE)
                                     {
+                                        var tag = sharedContent?.Tags?.FirstOrDefault(t => t.Name == "SER") ?? null;
+                                        if (tag != null)
+                                        {
+                                            tag.CreatedDate = DateTime.Now;
+                                            tag.ModifiedDate = DateTime.Now;
+                                        }
                                         var updateRequest = new HubUpdateRequest()
                                         {
                                             Info = sharedContent,
@@ -445,9 +457,12 @@
                     }
                     mailMessage.Body = msgBody;
                     mailMessage.From = new MailAddress(report.ServerSettings.From);
-                    foreach (var attach in report.ReportPaths)
+                    if (report.Settings.SendAttachment)
                     {
-                        mailMessage.Attachments.Add(attach);
+                        foreach (var attach in report.ReportPaths)
+                        {
+                            mailMessage.Attachments.Add(attach);
+                        }
                     }
 
                     foreach (var address in toAddresses)
@@ -468,10 +483,11 @@
                             mailMessage.Bcc.Add(address);
                     }
 
-                    client = new SmtpClient(report.ServerSettings.Host, report.ServerSettings.Port)
-                    {
-                        Credentials = new NetworkCredential(report.ServerSettings.Username, report.ServerSettings.Password),
-                    };
+                    client = new SmtpClient(report.ServerSettings.Host, report.ServerSettings.Port);
+
+                    if (!String.IsNullOrEmpty(report.ServerSettings.Username) && !String.IsNullOrEmpty(report.ServerSettings.Password))
+                        client.Credentials = new NetworkCredential(report.ServerSettings.Username, report.ServerSettings.Password);
+
                     logger.Debug("Send mail package...");
                     client.EnableSsl = report.ServerSettings.UseSsl;
                     client.Send(mailMessage);
