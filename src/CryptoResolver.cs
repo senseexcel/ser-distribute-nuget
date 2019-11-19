@@ -53,6 +53,10 @@
             {
                 ResolveInternal(jtoken.Children());
             }
+            else if(jtoken.Type == JTokenType.Object)
+            {
+                ResolveInternal(jtoken.Children());
+            }
             else
             {
                 var value = jtoken?.Value<string>() ?? String.Empty;
