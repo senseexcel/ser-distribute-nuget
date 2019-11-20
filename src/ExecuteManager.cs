@@ -52,7 +52,7 @@
                 var connections = fileConnection?.CurrentApp?.GetConnectionsAsync().Result ?? null;
                 if (connections != null)
                 {
-                    var libResult = connections.FirstOrDefault(n => n.qName.ToLowerInvariant() == result.Item2) ?? null;
+                    var libResult = connections.FirstOrDefault(n => n.qName.ToLowerInvariant() == result.Item2.ToLowerInvariant()) ?? null;
                     if (libResult == null)
                     {
                         logger.Error($"No data connection with name {result.Item2} found.");
