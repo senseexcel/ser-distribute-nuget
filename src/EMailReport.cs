@@ -17,22 +17,24 @@
         public MailServerSettings ServerSettings { get; private set; }
         public List<Attachment> ReportPaths { get; private set; }
         public JToken MailInfo { get; private set; }
+        public string ReportName { get; private set; }
         #endregion
 
         #region Constructor
-        public EMailReport(MailSettings settings, MailServerSettings serverSettings, JToken mailInfo)
+        public EMailReport(MailSettings settings, MailServerSettings serverSettings, JToken mailInfo, string name)
         {
             Settings = settings;
             ServerSettings = serverSettings;
             MailInfo = mailInfo;
             ReportPaths = new List<Attachment>();
+            ReportName = name;
         }
         #endregion
 
         #region Methods
-        public void AddReport(JobResultFileData fileData, string name)
+        public void AddReport(ReportData fileData, string name)
         {
-            var attachment = new Attachment(new MemoryStream(fileData.Data), name)
+            var attachment = new Attachment(new MemoryStream(fileData.DownloadData), name)
             {
                 Name = $"{name}{Path.GetExtension(fileData.Filename)}",
             };

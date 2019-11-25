@@ -98,18 +98,18 @@
             return null;
         }
 
-        private JobResultFileData GetFileData(List<JobResultFileData> fileDataList, string reportPath, Guid taskId)
-        {
-            return fileDataList.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath) && f.TaskId == taskId);
-        }
+        //private JobResultFileData GetFileData(List<JobResultFileData> fileDataList, string reportPath, Guid taskId)
+        //{
+        //    return fileDataList.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath) && f.TaskId == taskId);
+        //}
 
-        private string GetContentName(string reportName, JobResultFileData fileData)
+        private string GetContentName(string reportName, ReportData fileData)
         {
             return $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(fileData.Filename).TrimStart('.').ToUpperInvariant()})";
         }
         #endregion
 
-        public List<FileResult> CopyFile(FileSettings settings, List<JobResultFileData> fileDataList, Report report, Q2g.HelperQlik.Connection fileConnection)
+        public List<FileResult> CopyFile(FileSettings settings, Report report, Q2g.HelperQlik.Connection fileConnection)
         {
             var fileResults = new List<FileResult>();
             var reportName = report?.Name ?? null;
@@ -152,7 +152,7 @@
                 {
                     if (report.Paths.Count > 1)
                         fileCount++;
-                    var fileData = fileDataList.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
+                    var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
                     var targetFile = Path.Combine(targetPath, $"{reportName}{Path.GetExtension(reportPath)}");
                     if (fileCount > 0)
                         targetFile = Path.Combine(targetPath, $"{reportName}_{fileCount}{Path.GetExtension(reportPath)}");
@@ -161,18 +161,18 @@
                     {
                         case DistributeMode.OVERRIDE:
                             Directory.CreateDirectory(targetPath);
-                            File.WriteAllBytes(targetFile, fileData.Data);
+                            File.WriteAllBytes(targetFile, fileData.DownloadData);
                             break;
                         case DistributeMode.DELETEALLFIRST:
                             if (File.Exists(targetFile))
                                 File.Delete(targetFile);
                             Directory.CreateDirectory(targetPath);
-                            File.WriteAllBytes(targetFile, fileData.Data);
+                            File.WriteAllBytes(targetFile, fileData.DownloadData);
                             break;
                         case DistributeMode.CREATEONLY:
                             if (File.Exists(targetFile))
                                 throw new Exception($"The file {targetFile} does not exist.");
-                            File.WriteAllBytes(targetFile, fileData.Data);
+                            File.WriteAllBytes(targetFile, fileData.DownloadData);
                             break;
                         default:
                             throw new Exception($"Unkown distribute mode {settings.Mode}");
@@ -194,7 +194,7 @@
             }
         }
 
-        public void DeleteReportsFromHub(HubSettings settings, JobResult jobResult, List<JobResultFileData> fileDataList, Q2g.HelperQlik.Connection hubConnection)
+        public void DeleteReportsFromHub(HubSettings settings, JobResult jobResult, Q2g.HelperQlik.Connection hubConnection)
         {
             try
             {
@@ -215,8 +215,8 @@
                 {
                     foreach (var reportPath in report.Paths)
                     {
-                        var fileData = GetFileData(fileDataList, reportPath, jobResult.TaskId);
-                        var contentName = GetContentName(report?.Name ?? null, fileData);
+                        var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
+                        var contentName =  GetContentName(report?.Name ?? null, fileData);
                         var sharedContentList = sharedContentInfos.Where(s => s.Name == contentName).ToList();
                         foreach (var sharedContent in sharedContentList)
                         {
@@ -239,7 +239,7 @@
             }
         }
 
-        public Task<HubResult> UploadToHub(HubSettings settings, List<JobResultFileData> fileDataList, Report report, Q2g.HelperQlik.Connection hubConnection, Guid taskId)
+        public Task<HubResult> UploadToHub(HubSettings settings, Report report, Q2g.HelperQlik.Connection hubConnection)
         {
             var hubResult = new HubResult();
             var reportName = report?.Name ?? null;
@@ -253,7 +253,7 @@
                 var hub = new QlikQrsHub(hubUri, hubConnection.ConnectCookie);
                 foreach (var reportPath in report.Paths)
                 {
-                    var fileData = GetFileData(fileDataList, reportPath, taskId);
+                    var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
                     var contentName = GetContentName(reportName, fileData);
 
                     if (settings.Mode == DistributeMode.OVERRIDE ||
@@ -303,7 +303,7 @@
                                         {
                                             ContentType = $"application/{Path.GetExtension(fileData.Filename).Trim('.')}",
                                             ExternalPath = Path.GetFileName(fileData.Filename),
-                                            FileData = fileData.Data,
+                                            FileData = fileData.DownloadData,
                                         }
                                     };
                                     hubInfo = hub.CreateSharedContentAsync(createRequest).Result;
@@ -325,7 +325,7 @@
                                             {
                                                 ContentType = $"application/{Path.GetExtension(fileData.Filename).Trim('.')}",
                                                 ExternalPath = Path.GetFileName(fileData.Filename),
-                                                FileData = fileData.Data,
+                                                FileData = fileData.DownloadData,
                                             }
                                         };
                                         hubInfo = hub.UpdateSharedContentAsync(updateRequest).Result;
@@ -408,22 +408,24 @@
                 var mailList = new List<EMailReport>();
                 foreach (var mailSettings in settingsList)
                 {
-                    var fileDataList = mailSettings.GetData();
-                    foreach (var path in mailSettings.Paths)
+                    foreach (var report in mailSettings.MailReports)
                     {
-                        var fileData = fileDataList.FirstOrDefault(f => Path.GetFileName(path) == f.Filename);
-                        var result = mailList.SingleOrDefault(m => m.Settings.ToString() == mailSettings.ToString());
-                        if (result == null)
+                        foreach (var path in report.Paths)
                         {
-                            logger.Debug("Add report to mail");
-                            var mailReport = new EMailReport(mailSettings, mailSettings.MailServer, mailSettings.ToString());
-                            mailReport.AddReport(fileData, mailSettings.ReportName);
-                            mailList.Add(mailReport);
-                        }
-                        else
-                        {
-                            logger.Debug("Merge report to mail");
-                            result.AddReport(fileData, mailSettings.ReportName);
+                            var fileData = report.Data.FirstOrDefault(f => Path.GetFileName(path) == f.Filename);
+                            var result = mailList.SingleOrDefault(m => m.Settings.ToString() == mailSettings.ToString());
+                            if (result == null)
+                            {
+                                logger.Debug("Add report to mail");
+                                var mailReport = new EMailReport(mailSettings, mailSettings.MailServer, mailSettings.ToString(), report.Name);
+                                mailReport.AddReport(fileData, report.Name);
+                                mailList.Add(mailReport);
+                            }
+                            else
+                            {
+                                logger.Debug("Merge report to mail");
+                                result.AddReport(fileData, report.Name);
+                            }
                         }
                     }
                 }
@@ -434,7 +436,7 @@
                 {
                     mailResult = new MailResult();
                     mailMessage = new MailMessage();
-                    mailResult.ReportName = report?.Settings?.ReportName ?? null;
+                    mailResult.ReportName = report?.ReportName ?? null;
                     var toAddresses = report.Settings.To?.Split(';') ?? new string[0];
                     var ccAddresses = report.Settings.Cc?.Split(';') ?? new string[0];
                     var bccAddresses = report.Settings.Bcc?.Split(';') ?? new string[0];
@@ -495,7 +497,7 @@
                     mailMessage.Dispose();
                     client.Dispose();
                     mailResult.Success = true;
-                    mailResult.Message = "Mail sent successful.";
+                    mailResult.Message = "send mail successful.";
                     mailResults.Add(mailResult);
                 }
                 return mailResults;
