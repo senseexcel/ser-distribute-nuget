@@ -17,17 +17,15 @@
         public MailServerSettings ServerSettings { get; private set; }
         public List<Attachment> ReportPaths { get; private set; }
         public JToken MailInfo { get; private set; }
-        public string ReportName { get; private set; }
         #endregion
 
         #region Constructor
-        public EMailReport(MailSettings settings, MailServerSettings serverSettings, JToken mailInfo, string name)
+        public EMailReport(MailSettings settings, MailServerSettings serverSettings, JToken mailInfo)
         {
             Settings = settings;
             ServerSettings = serverSettings;
             MailInfo = mailInfo;
             ReportPaths = new List<Attachment>();
-            ReportName = name;
         }
         #endregion
 

@@ -17,6 +17,7 @@
     using Ser.Api;
     using Q2g.HelperQrs;
     using Q2g.HelperQlik;
+    using System.Text;
     #endregion
 
     public class ExecuteManager
@@ -97,11 +98,6 @@
 
             return null;
         }
-
-        //private JobResultFileData GetFileData(List<JobResultFileData> fileDataList, string reportPath, Guid taskId)
-        //{
-        //    return fileDataList.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath) && f.TaskId == taskId);
-        //}
 
         private string GetContentName(string reportName, ReportData fileData)
         {
@@ -406,18 +402,21 @@
             try
             {
                 var mailList = new List<EMailReport>();
+                var reportNames = new StringBuilder();
                 foreach (var mailSettings in settingsList)
                 {
                     foreach (var report in mailSettings.MailReports)
                     {
                         foreach (var path in report.Paths)
                         {
+                            logger.Debug($"Report Name: {report.Name}");
+                            reportNames.Append($"{report.Name} |");
                             var fileData = report.Data.FirstOrDefault(f => Path.GetFileName(path) == f.Filename);
                             var result = mailList.SingleOrDefault(m => m.Settings.ToString() == mailSettings.ToString());
                             if (result == null)
                             {
                                 logger.Debug("Add report to mail");
-                                var mailReport = new EMailReport(mailSettings, mailSettings.MailServer, mailSettings.ToString(), report.Name);
+                                var mailReport = new EMailReport(mailSettings, mailSettings.MailServer, mailSettings.ToString());
                                 mailReport.AddReport(fileData, report.Name);
                                 mailList.Add(mailReport);
                             }
@@ -436,7 +435,7 @@
                 {
                     mailResult = new MailResult();
                     mailMessage = new MailMessage();
-                    mailResult.ReportName = report?.ReportName ?? null;
+                    mailResult.ReportName = reportNames.ToString()?.Trim()?.Trim('|') ?? null;
                     var toAddresses = report.Settings.To?.Split(';') ?? new string[0];
                     var ccAddresses = report.Settings.Cc?.Split(';') ?? new string[0];
                     var bccAddresses = report.Settings.Bcc?.Split(';') ?? new string[0];
