@@ -212,7 +212,7 @@
                     foreach (var reportPath in report.Paths)
                     {
                         var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
-                        var contentName =  GetContentName(report?.Name ?? null, fileData);
+                        var contentName = GetContentName(report?.Name ?? null, fileData);
                         var sharedContentList = sharedContentInfos.Where(s => s.Name == contentName).ToList();
                         foreach (var sharedContent in sharedContentList)
                         {
@@ -288,12 +288,12 @@
                                         Name = contentName,
                                         ReportType = settings.SharedContentType,
                                         Description = "Created by Sense Excel Reporting",
-                                        Tags = new List<Tag>() { new Tag() 
-                                            { 
+                                        Tags = new List<Tag>() { new Tag()
+                                            {
                                                  Name = "SER",
                                                  CreatedDate = DateTime.Now,
                                                  ModifiedDate = DateTime.Now
-                                            } 
+                                            }
                                         },
                                         Data = new ContentData()
                                         {
@@ -439,8 +439,8 @@
                     var toAddresses = report.Settings.To?.Split(';') ?? new string[0];
                     var ccAddresses = report.Settings.Cc?.Split(';') ?? new string[0];
                     var bccAddresses = report.Settings.Bcc?.Split(';') ?? new string[0];
-                    mailMessage.Subject = report.Settings.Subject;
-                    var msgBody = report.Settings.Message.Trim();
+                    mailMessage.Subject = report.Settings?.Subject?.Trim() ?? "NO SUBJECT !!! :(";
+                    var msgBody = report.Settings?.Message?.Trim() ?? String.Empty;
                     switch (report.Settings.MailType)
                     {
                         case EMailType.TEXT:
@@ -456,42 +456,49 @@
                         default:
                             throw new Exception($"Unknown mail type {report.Settings.MailType}");
                     }
+                    logger.Debug($"Set mail body '{msgBody}'");
                     mailMessage.Body = msgBody;
+                    logger.Debug($"Set from address '{report.ServerSettings.From}'");
                     mailMessage.From = new MailAddress(report.ServerSettings.From);
                     if (report.Settings.SendAttachment)
                     {
                         foreach (var attach in report.ReportPaths)
                         {
+                            logger.Debug($"Add attachment '{attach.Name}'.");
                             mailMessage.Attachments.Add(attach);
                         }
                     }
 
                     foreach (var address in toAddresses)
-                    {
                         if (!String.IsNullOrEmpty(address))
                             mailMessage.To.Add(address);
-                    }
 
                     foreach (var address in ccAddresses)
-                    {
                         if (!String.IsNullOrEmpty(address))
                             mailMessage.CC.Add(address);
-                    }
 
                     foreach (var address in bccAddresses)
-                    {
                         if (!String.IsNullOrEmpty(address))
                             mailMessage.Bcc.Add(address);
-                    }
 
                     client = new SmtpClient(report.ServerSettings.Host, report.ServerSettings.Port);
 
+                    logger.Debug($"Set Credential '{report.ServerSettings.Username}'");
                     if (!String.IsNullOrEmpty(report.ServerSettings.Username) && !String.IsNullOrEmpty(report.ServerSettings.Password))
                         client.Credentials = new NetworkCredential(report.ServerSettings.Username, report.ServerSettings.Password);
 
-                    logger.Debug("Send mail package...");
+                    logger.Debug($"Set SSL '{report.ServerSettings.UseSsl}'");
                     client.EnableSsl = report.ServerSettings.UseSsl;
-                    client.Send(mailMessage);
+
+                    var delay = 0;
+                    if (report.ServerSettings.SendDelay > 0)
+                        delay = report.ServerSettings.SendDelay * 1000;
+                        
+                    logger.Debug("Send mail package...");
+                    Task.Delay(delay).ContinueWith(r => 
+                    {
+                        client.Send(mailMessage);
+                    }).Wait();
 
                     mailMessage.Dispose();
                     client.Dispose();
