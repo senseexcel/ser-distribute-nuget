@@ -416,15 +416,15 @@
             try
             {
                 var mailList = new List<EMailReport>();
+                var reportNames = new StringBuilder();
                 foreach (var mailSettings in settingsList)
                 {
-                    var reportNames = new StringBuilder();
                     foreach (var report in mailSettings.MailReports)
                     {
                         foreach (var path in report.Paths)
                         {
                             logger.Debug($"Report Name: {report.Name}");
-                            reportNames.Append($"{report.Name} |");
+                            reportNames.Append($"{report.Name},");
                             var fileData = report.Data.FirstOrDefault(f => Path.GetFileName(path) == f.Filename);
                             var result = mailList.SingleOrDefault(m => m.Settings.ToString() == mailSettings.ToString());
                             if (result == null)
@@ -437,7 +437,7 @@
                             else
                             {
                                 logger.Debug("Merge report to mail");
-                                result.AddReport(fileData, reportNames.ToString()?.Trim()?.Trim('|'));
+                                result.AddReport(fileData, reportNames.ToString()?.Trim()?.TrimEnd(','));
                             }
                         }
                     }
@@ -450,10 +450,10 @@
                     mailResult = new MailResult();
                     mailMessage = new MailMessage();
                     mailResult.ReportName = report.ReportNames;
-                    mailResult.To = report.Settings.To;
-                    var toAddresses = report.Settings.To?.Split(';') ?? new string[0];
-                    var ccAddresses = report.Settings.Cc?.Split(';') ?? new string[0];
-                    var bccAddresses = report.Settings.Bcc?.Split(';') ?? new string[0];
+                    mailResult.To = report.Settings.To.Replace(";", ",").TrimEnd(',');
+                    var toAddresses = report.Settings.To?.Split(';', StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
+                    var ccAddresses = report.Settings.Cc?.Split(';', StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
+                    var bccAddresses = report.Settings.Bcc?.Split(';', StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
                     mailMessage.Subject = report.Settings?.Subject?.Trim() ?? "NO SUBJECT !!! :(";
                     logger.Debug($"Subject: {mailMessage.Subject}");
                     mailResult.Subject = mailMessage.Subject;
