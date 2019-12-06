@@ -103,6 +103,20 @@
         {
             return $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(fileData.Filename).TrimStart('.').ToUpperInvariant()})";
         }
+
+        private bool IsValidMailAddress(string value)
+        {
+            try
+            {
+                var mail = new MailAddress(value);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, $"No valid mail address: '{value}'.");
+                return false;
+            }
+        }
         #endregion
 
         public List<FileResult> CopyFile(FileSettings settings, Report report, Q2g.HelperQlik.Connection fileConnection)
@@ -470,15 +484,15 @@
                     }
 
                     foreach (var address in toAddresses)
-                        if (!String.IsNullOrEmpty(address))
+                        if (IsValidMailAddress(address))
                             mailMessage.To.Add(address);
 
                     foreach (var address in ccAddresses)
-                        if (!String.IsNullOrEmpty(address))
+                        if (IsValidMailAddress(address))
                             mailMessage.CC.Add(address);
 
                     foreach (var address in bccAddresses)
-                        if (!String.IsNullOrEmpty(address))
+                        if (IsValidMailAddress(address))
                             mailMessage.Bcc.Add(address);
 
                     client = new SmtpClient(report.ServerSettings.Host, report.ServerSettings.Port);
