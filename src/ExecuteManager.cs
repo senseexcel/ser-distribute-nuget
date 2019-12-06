@@ -416,9 +416,9 @@
             try
             {
                 var mailList = new List<EMailReport>();
-                var reportNames = new StringBuilder();
                 foreach (var mailSettings in settingsList)
                 {
+                    var reportNames = new StringBuilder();
                     foreach (var report in mailSettings.MailReports)
                     {
                         foreach (var path in report.Paths)
@@ -437,7 +437,7 @@
                             else
                             {
                                 logger.Debug("Merge report to mail");
-                                result.AddReport(fileData, report.Name);
+                                result.AddReport(fileData, reportNames.ToString()?.Trim()?.Trim('|'));
                             }
                         }
                     }
@@ -449,7 +449,7 @@
                 {
                     mailResult = new MailResult();
                     mailMessage = new MailMessage();
-                    mailResult.ReportName = reportNames.ToString()?.Trim()?.Trim('|') ?? null;
+                    mailResult.ReportName = report.ReportNames;
                     var toAddresses = report.Settings.To?.Split(';') ?? new string[0];
                     var ccAddresses = report.Settings.Cc?.Split(';') ?? new string[0];
                     var bccAddresses = report.Settings.Bcc?.Split(';') ?? new string[0];
@@ -515,15 +515,19 @@
                         Task.Delay(delay).ContinueWith(r =>
                         {
                             client.Send(mailMessage);
+                            mailResult.Message = "send mail successful.";
+                            mailResult.Success = true;
                         }).Wait();
                     }
                     else
+                    {
                         logger.Error("Mail without mail Address could not be sent.");
-
+                        mailResult.Message = "send mail failed.";
+                        mailResult.Success = false;
+                    }
                     mailMessage.Dispose();
                     client.Dispose();
-                    mailResult.Success = true;
-                    mailResult.Message = "send mail successful.";
+                    
                     mailResults.Add(mailResult);
                 }
                 return mailResults;

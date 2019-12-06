@@ -17,6 +17,7 @@
         public MailServerSettings ServerSettings { get; private set; }
         public List<Attachment> ReportPaths { get; private set; }
         public JToken MailInfo { get; private set; }
+        public string ReportNames { get; private set; }
         #endregion
 
         #region Constructor
@@ -36,8 +37,8 @@
             {
                 Name = $"{name}{Path.GetExtension(fileData.Filename)}",
             };
-
             ReportPaths.Add(attachment);
+            ReportNames = name;
         }
         #endregion
     }
