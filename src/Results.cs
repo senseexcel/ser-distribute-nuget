@@ -37,7 +37,10 @@
 
     [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,
                 NamingStrategyType = typeof(CamelCaseNamingStrategy))]
-    public class MailResult : BaseResult { }
+    public class MailResult : BaseResult 
+    { 
+        public string To { get; set; }
+    }
 
     [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,
                 NamingStrategyType = typeof(CamelCaseNamingStrategy))]

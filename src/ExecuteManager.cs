@@ -450,6 +450,7 @@
                     mailResult = new MailResult();
                     mailMessage = new MailMessage();
                     mailResult.ReportName = report.ReportNames;
+                    mailResult.To = report.Settings.To;
                     var toAddresses = report.Settings.To?.Split(';') ?? new string[0];
                     var ccAddresses = report.Settings.Cc?.Split(';') ?? new string[0];
                     var bccAddresses = report.Settings.Bcc?.Split(';') ?? new string[0];
