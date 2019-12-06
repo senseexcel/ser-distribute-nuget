@@ -456,6 +456,7 @@
                     var bccAddresses = report.Settings.Bcc?.Split(';') ?? new string[0];
                     mailMessage.Subject = report.Settings?.Subject?.Trim() ?? "NO SUBJECT !!! :(";
                     logger.Debug($"Subject: {mailMessage.Subject}");
+                    mailResult.Subject = mailMessage.Subject;
                     var msgBody = report.Settings?.Message?.Trim() ?? String.Empty;
                     switch (report.Settings.MailType)
                     {
