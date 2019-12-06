@@ -454,6 +454,7 @@
                     var ccAddresses = report.Settings.Cc?.Split(';') ?? new string[0];
                     var bccAddresses = report.Settings.Bcc?.Split(';') ?? new string[0];
                     mailMessage.Subject = report.Settings?.Subject?.Trim() ?? "NO SUBJECT !!! :(";
+                    logger.Debug($"Subject: {mailMessage.Subject}");
                     var msgBody = report.Settings?.Message?.Trim() ?? String.Empty;
                     switch (report.Settings.MailType)
                     {
@@ -507,12 +508,17 @@
                     var delay = 0;
                     if (report.ServerSettings.SendDelay > 0)
                         delay = report.ServerSettings.SendDelay * 1000;
-                        
-                    logger.Debug("Send mail package...");
-                    Task.Delay(delay).ContinueWith(r => 
+
+                    if (mailMessage.To.Count > 0)
                     {
-                        client.Send(mailMessage);
-                    }).Wait();
+                        logger.Debug("Send mail package...");
+                        Task.Delay(delay).ContinueWith(r =>
+                        {
+                            client.Send(mailMessage);
+                        }).Wait();
+                    }
+                    else
+                        logger.Error("Mail without mail Address could not be sent.");
 
                     mailMessage.Dispose();
                     client.Dispose();
