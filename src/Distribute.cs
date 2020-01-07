@@ -55,7 +55,6 @@
             {
                 logger.Info("Read json result files...");
                 var jobResults = new List<JobResult>();
-                var fileDataList = new List<JobResultFileData>();
                 string[] jsonPaths = Directory.GetFiles(resultFolder, "*.json", SearchOption.TopDirectoryOnly);
                 foreach (var jsonPath in jsonPaths)
                 {
@@ -71,17 +70,16 @@
                         foreach (var path in report.Paths)
                         {
                             var data = File.ReadAllBytes(path);
-                            var fileData = new JobResultFileData()
+                            report.Data.Add(new ReportData()
                             {
                                 Filename = Path.GetFileName(path),
-                                Data = data
-                            };
-                            fileDataList.Add(fileData);
+                                DownloadData = data
+                            });
                         }
                     }
                     jobResults.Add(result);
                 }
-                return Run(jobResults, fileDataList, privateKeyPath);
+                return Run(jobResults, privateKeyPath);
             }
             catch (Exception ex)
             {
@@ -90,7 +88,7 @@
             }
         }
 
-        public string Run(List<JobResult> jobResults, List<JobResultFileData> jobFileData, string privateKeyPath = null, CancellationToken? token = null)
+        public string Run(List<JobResult> jobResults, string privateKeyPath = null, CancellationToken? token = null)
         {
             var results = new DistributeResults();
             var connectionManager = new ConnectionManager();
@@ -138,7 +136,7 @@
                                         var fileSettings = GetSettings<FileSettings>(location);
                                         var fileConfigs = JsonConvert.DeserializeObject<List<ConnectionConfig>>(JsonConvert.SerializeObject(fileSettings?.Connections ?? new List<SerConnection>()));
                                         var fileConnection = connectionManager.GetConnection(fileConfigs);
-                                        results.FileResults.AddRange(execute.CopyFile(fileSettings, jobFileData, report, fileConnection));
+                                        results.FileResults.AddRange(execute.CopyFile(fileSettings, report, fileConnection));
                                         break;
                                     case SettingsType.HUB:
                                         //Upload to hub
@@ -148,8 +146,8 @@
                                         connectionManager.LoadConnections(hubConfigs, 1);
                                         var hubConnection = connectionManager.GetConnection(hubConfigs);
                                         if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
-                                            execute.DeleteReportsFromHub(hubSettings, jobResult, jobFileData, hubConnection);
-                                        var task = execute.UploadToHub(hubSettings, jobFileData, report, hubConnection, jobResult.TaskId);
+                                            execute.DeleteReportsFromHub(hubSettings, jobResult, hubConnection);
+                                        var task = execute.UploadToHub(hubSettings, report, hubConnection);
                                         if (task != null)
                                             uploadTasks.Add(task);
                                         break;
@@ -157,9 +155,7 @@
                                         //Cache mail infos
                                         logger.Info("Check - Cache Mail...");
                                         var mailSettings = GetSettings<MailSettings>(location);
-                                        mailSettings.SetData(jobFileData);
-                                        mailSettings.ReportName = report.Name;
-                                        mailSettings.Paths = report?.Paths;
+                                        mailSettings.MailReports.Add(report);
                                         mailList.Add(mailSettings);
                                         break;
                                     default:

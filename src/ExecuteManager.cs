@@ -17,6 +17,7 @@
     using Ser.Api;
     using Q2g.HelperQrs;
     using Q2g.HelperQlik;
+    using System.Text;
     #endregion
 
     public class ExecuteManager
@@ -52,7 +53,7 @@
                 var connections = fileConnection?.CurrentApp?.GetConnectionsAsync().Result ?? null;
                 if (connections != null)
                 {
-                    var libResult = connections.FirstOrDefault(n => n.qName.ToLowerInvariant() == result.Item2) ?? null;
+                    var libResult = connections.FirstOrDefault(n => n.qName.ToLowerInvariant() == result.Item2.ToLowerInvariant()) ?? null;
                     if (libResult == null)
                     {
                         logger.Error($"No data connection with name {result.Item2} found.");
@@ -98,18 +99,27 @@
             return null;
         }
 
-        private JobResultFileData GetFileData(List<JobResultFileData> fileDataList, string reportPath, Guid taskId)
-        {
-            return fileDataList.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath) && f.TaskId == taskId);
-        }
-
-        private string GetContentName(string reportName, JobResultFileData fileData)
+        private string GetContentName(string reportName, ReportData fileData)
         {
             return $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(fileData.Filename).TrimStart('.').ToUpperInvariant()})";
         }
+
+        private bool IsValidMailAddress(string value)
+        {
+            try
+            {
+                var mail = new MailAddress(value);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, $"No valid mail address: '{value}'.");
+                return false;
+            }
+        }
         #endregion
 
-        public List<FileResult> CopyFile(FileSettings settings, List<JobResultFileData> fileDataList, Report report, Q2g.HelperQlik.Connection fileConnection)
+        public List<FileResult> CopyFile(FileSettings settings, Report report, Q2g.HelperQlik.Connection fileConnection)
         {
             var fileResults = new List<FileResult>();
             var reportName = report?.Name ?? null;
@@ -152,7 +162,7 @@
                 {
                     if (report.Paths.Count > 1)
                         fileCount++;
-                    var fileData = fileDataList.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
+                    var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
                     var targetFile = Path.Combine(targetPath, $"{reportName}{Path.GetExtension(reportPath)}");
                     if (fileCount > 0)
                         targetFile = Path.Combine(targetPath, $"{reportName}_{fileCount}{Path.GetExtension(reportPath)}");
@@ -161,18 +171,18 @@
                     {
                         case DistributeMode.OVERRIDE:
                             Directory.CreateDirectory(targetPath);
-                            File.WriteAllBytes(targetFile, fileData.Data);
+                            File.WriteAllBytes(targetFile, fileData.DownloadData);
                             break;
                         case DistributeMode.DELETEALLFIRST:
                             if (File.Exists(targetFile))
                                 File.Delete(targetFile);
                             Directory.CreateDirectory(targetPath);
-                            File.WriteAllBytes(targetFile, fileData.Data);
+                            File.WriteAllBytes(targetFile, fileData.DownloadData);
                             break;
                         case DistributeMode.CREATEONLY:
                             if (File.Exists(targetFile))
                                 throw new Exception($"The file {targetFile} does not exist.");
-                            File.WriteAllBytes(targetFile, fileData.Data);
+                            File.WriteAllBytes(targetFile, fileData.DownloadData);
                             break;
                         default:
                             throw new Exception($"Unkown distribute mode {settings.Mode}");
@@ -194,7 +204,7 @@
             }
         }
 
-        public void DeleteReportsFromHub(HubSettings settings, JobResult jobResult, List<JobResultFileData> fileDataList, Q2g.HelperQlik.Connection hubConnection)
+        public void DeleteReportsFromHub(HubSettings settings, JobResult jobResult, Q2g.HelperQlik.Connection hubConnection)
         {
             try
             {
@@ -215,7 +225,7 @@
                 {
                     foreach (var reportPath in report.Paths)
                     {
-                        var fileData = GetFileData(fileDataList, reportPath, jobResult.TaskId);
+                        var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
                         var contentName = GetContentName(report?.Name ?? null, fileData);
                         var sharedContentList = sharedContentInfos.Where(s => s.Name == contentName).ToList();
                         foreach (var sharedContent in sharedContentList)
@@ -239,7 +249,7 @@
             }
         }
 
-        public Task<HubResult> UploadToHub(HubSettings settings, List<JobResultFileData> fileDataList, Report report, Q2g.HelperQlik.Connection hubConnection, Guid taskId)
+        public Task<HubResult> UploadToHub(HubSettings settings, Report report, Q2g.HelperQlik.Connection hubConnection)
         {
             var hubResult = new HubResult();
             var reportName = report?.Name ?? null;
@@ -253,7 +263,7 @@
                 var hub = new QlikQrsHub(hubUri, hubConnection.ConnectCookie);
                 foreach (var reportPath in report.Paths)
                 {
-                    var fileData = GetFileData(fileDataList, reportPath, taskId);
+                    var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
                     var contentName = GetContentName(reportName, fileData);
 
                     if (settings.Mode == DistributeMode.OVERRIDE ||
@@ -292,18 +302,18 @@
                                         Name = contentName,
                                         ReportType = settings.SharedContentType,
                                         Description = "Created by Sense Excel Reporting",
-                                        Tags = new List<Tag>() { new Tag() 
-                                            { 
+                                        Tags = new List<Tag>() { new Tag()
+                                            {
                                                  Name = "SER",
                                                  CreatedDate = DateTime.Now,
                                                  ModifiedDate = DateTime.Now
-                                            } 
+                                            }
                                         },
                                         Data = new ContentData()
                                         {
                                             ContentType = $"application/{Path.GetExtension(fileData.Filename).Trim('.')}",
                                             ExternalPath = Path.GetFileName(fileData.Filename),
-                                            FileData = fileData.Data,
+                                            FileData = fileData.DownloadData,
                                         }
                                     };
                                     hubInfo = hub.CreateSharedContentAsync(createRequest).Result;
@@ -325,7 +335,7 @@
                                             {
                                                 ContentType = $"application/{Path.GetExtension(fileData.Filename).Trim('.')}",
                                                 ExternalPath = Path.GetFileName(fileData.Filename),
-                                                FileData = fileData.Data,
+                                                FileData = fileData.DownloadData,
                                             }
                                         };
                                         hubInfo = hub.UpdateSharedContentAsync(updateRequest).Result;
@@ -406,24 +416,29 @@
             try
             {
                 var mailList = new List<EMailReport>();
+                var reportNames = new StringBuilder();
                 foreach (var mailSettings in settingsList)
                 {
-                    var fileDataList = mailSettings.GetData();
-                    foreach (var path in mailSettings.Paths)
+                    foreach (var report in mailSettings.MailReports)
                     {
-                        var fileData = fileDataList.FirstOrDefault(f => Path.GetFileName(path) == f.Filename);
-                        var result = mailList.SingleOrDefault(m => m.Settings.ToString() == mailSettings.ToString());
-                        if (result == null)
+                        foreach (var path in report.Paths)
                         {
-                            logger.Debug("Add report to mail");
-                            var mailReport = new EMailReport(mailSettings, mailSettings.MailServer, mailSettings.ToString());
-                            mailReport.AddReport(fileData, mailSettings.ReportName);
-                            mailList.Add(mailReport);
-                        }
-                        else
-                        {
-                            logger.Debug("Merge report to mail");
-                            result.AddReport(fileData, mailSettings.ReportName);
+                            logger.Debug($"Report Name: {report.Name}");
+                            reportNames.Append($"{report.Name},");
+                            var fileData = report.Data.FirstOrDefault(f => Path.GetFileName(path) == f.Filename);
+                            var result = mailList.SingleOrDefault(m => m.Settings.ToString() == mailSettings.ToString());
+                            if (result == null)
+                            {
+                                logger.Debug("Add report to mail");
+                                var mailReport = new EMailReport(mailSettings, mailSettings.MailServer, mailSettings.ToString());
+                                mailReport.AddReport(fileData, report.Name);
+                                mailList.Add(mailReport);
+                            }
+                            else
+                            {
+                                logger.Debug("Merge report to mail");
+                                result.AddReport(fileData, reportNames.ToString()?.Trim()?.TrimEnd(','));
+                            }
                         }
                     }
                 }
@@ -434,12 +449,15 @@
                 {
                     mailResult = new MailResult();
                     mailMessage = new MailMessage();
-                    mailResult.ReportName = report?.Settings?.ReportName ?? null;
-                    var toAddresses = report.Settings.To?.Split(';') ?? new string[0];
-                    var ccAddresses = report.Settings.Cc?.Split(';') ?? new string[0];
-                    var bccAddresses = report.Settings.Bcc?.Split(';') ?? new string[0];
-                    mailMessage.Subject = report.Settings.Subject;
-                    var msgBody = report.Settings.Message.Trim();
+                    mailResult.ReportName = report.ReportNames;
+                    mailResult.To = report.Settings.To.Replace(";", ",").TrimEnd(',');
+                    var toAddresses = report.Settings.To?.Split(';', StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
+                    var ccAddresses = report.Settings.Cc?.Split(';', StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
+                    var bccAddresses = report.Settings.Bcc?.Split(';', StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
+                    mailMessage.Subject = report.Settings?.Subject?.Trim() ?? "NO SUBJECT !!! :(";
+                    logger.Debug($"Subject: {mailMessage.Subject}");
+                    mailResult.Subject = mailMessage.Subject;
+                    var msgBody = report.Settings?.Message?.Trim() ?? String.Empty;
                     switch (report.Settings.MailType)
                     {
                         case EMailType.TEXT:
@@ -455,47 +473,63 @@
                         default:
                             throw new Exception($"Unknown mail type {report.Settings.MailType}");
                     }
+                    logger.Debug($"Set mail body '{msgBody}'");
                     mailMessage.Body = msgBody;
+                    logger.Debug($"Set from address '{report.ServerSettings.From}'");
                     mailMessage.From = new MailAddress(report.ServerSettings.From);
                     if (report.Settings.SendAttachment)
                     {
                         foreach (var attach in report.ReportPaths)
                         {
+                            logger.Debug($"Add attachment '{attach.Name}'.");
                             mailMessage.Attachments.Add(attach);
                         }
                     }
 
                     foreach (var address in toAddresses)
-                    {
-                        if (!String.IsNullOrEmpty(address))
+                        if (IsValidMailAddress(address))
                             mailMessage.To.Add(address);
-                    }
 
                     foreach (var address in ccAddresses)
-                    {
-                        if (!String.IsNullOrEmpty(address))
+                        if (IsValidMailAddress(address))
                             mailMessage.CC.Add(address);
-                    }
 
                     foreach (var address in bccAddresses)
-                    {
-                        if (!String.IsNullOrEmpty(address))
+                        if (IsValidMailAddress(address))
                             mailMessage.Bcc.Add(address);
-                    }
 
                     client = new SmtpClient(report.ServerSettings.Host, report.ServerSettings.Port);
 
+                    logger.Debug($"Set Credential '{report.ServerSettings.Username}'");
                     if (!String.IsNullOrEmpty(report.ServerSettings.Username) && !String.IsNullOrEmpty(report.ServerSettings.Password))
                         client.Credentials = new NetworkCredential(report.ServerSettings.Username, report.ServerSettings.Password);
 
-                    logger.Debug("Send mail package...");
+                    logger.Debug($"Set SSL '{report.ServerSettings.UseSsl}'");
                     client.EnableSsl = report.ServerSettings.UseSsl;
-                    client.Send(mailMessage);
 
+                    var delay = 0;
+                    if (report.ServerSettings.SendDelay > 0)
+                        delay = report.ServerSettings.SendDelay * 1000;
+
+                    if (mailMessage.To.Count > 0)
+                    {
+                        logger.Debug("Send mail package...");
+                        Task.Delay(delay).ContinueWith(r =>
+                        {
+                            client.Send(mailMessage);
+                            mailResult.Message = "send mail successful.";
+                            mailResult.Success = true;
+                        }).Wait();
+                    }
+                    else
+                    {
+                        logger.Error("Mail without mail Address could not be sent.");
+                        mailResult.Message = "send mail failed.";
+                        mailResult.Success = false;
+                    }
                     mailMessage.Dispose();
                     client.Dispose();
-                    mailResult.Success = true;
-                    mailResult.Message = "Mail sent successful.";
+                    
                     mailResults.Add(mailResult);
                 }
                 return mailResults;
