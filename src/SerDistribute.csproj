@@ -4,7 +4,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <Authors>akquinet finance &amp; controlling GmbH</Authors>
     <Company>akquinet finance &amp; controlling GmbH</Company>
-    <Copyright>Copyright (c) 2019</Copyright>
+    <Copyright>Copyright (c) $([System.DateTime]::Today.ToString('yyyy'))</Copyright>
     <RootNamespace>Ser.Distribute</RootNamespace>
     <Version>$(GitVersion_NuGetVersion)</Version>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
