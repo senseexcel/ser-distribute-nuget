@@ -23,32 +23,32 @@
     <When Condition="'$(Configuration)' == 'Release'">
       <ItemGroup>
         <Reference Include="Q2gHelperQrs">
-          <HintPath>..\..\q2g-helper-qrs-nuget\src\bin\Release\$(TargetFramework)\Q2gHelperQrs.dll</HintPath>
+          <HintPath>..\..\q2g-helper-qrs\src\bin\Release\$(TargetFramework)\Q2gHelperQrs.dll</HintPath>
         </Reference>
         <Reference Include="Ser.Api">
-          <HintPath>..\..\ser-api-nuget\src\bin\Release\$(TargetFramework)\SerApi.dll</HintPath>
+          <HintPath>..\..\ser-api\src\bin\Release\$(TargetFramework)\SerApi.dll</HintPath>
         </Reference>
         <Reference Include="Q2gHelperPem">
-          <HintPath>..\..\q2g-helper-pem-nuget\src\bin\Release\$(TargetFramework)\Q2gHelperPem.dll</HintPath>
+          <HintPath>..\..\q2g-helper-pem\src\bin\Release\$(TargetFramework)\Q2gHelperPem.dll</HintPath>
         </Reference>
         <Reference Include="Q2g.HelperQlik">
-          <HintPath>..\..\q2g-helper-qlik-nuget\src\bin\Release\$(TargetFramework)\Q2gHelperQlik.dll</HintPath>
+          <HintPath>..\..\q2g-helper-qlik\src\bin\Release\$(TargetFramework)\Q2gHelperQlik.dll</HintPath>
         </Reference>
       </ItemGroup>
     </When>
     <Otherwise>
       <ItemGroup>
         <Reference Include="Q2gHelperQrs">
-          <HintPath>..\..\q2g-helper-qrs-nuget\src\bin\Debug\$(TargetFramework)\Q2gHelperQrs.dll</HintPath>
+          <HintPath>..\..\q2g-helper-qrs\src\bin\Debug\$(TargetFramework)\Q2gHelperQrs.dll</HintPath>
         </Reference>
         <Reference Include="Ser.Api">
-          <HintPath>..\..\ser-api-nuget\src\bin\Debug\$(TargetFramework)\SerApi.dll</HintPath>
+          <HintPath>..\..\ser-api\src\bin\Debug\$(TargetFramework)\SerApi.dll</HintPath>
         </Reference>
         <Reference Include="Q2gHelperPem">
-          <HintPath>..\..\q2g-helper-pem-nuget\src\bin\Debug\$(TargetFramework)\Q2gHelperPem.dll</HintPath>
+          <HintPath>..\..\q2g-helper-pem\src\bin\Debug\$(TargetFramework)\Q2gHelperPem.dll</HintPath>
         </Reference>
         <Reference Include="Q2g.HelperQlik">
-          <HintPath>..\..\q2g-helper-qlik-nuget\src\bin\Debug\$(TargetFramework)\Q2gHelperQlik.dll</HintPath>
+          <HintPath>..\..\q2g-helper-qlik\src\bin\Debug\$(TargetFramework)\Q2gHelperQlik.dll</HintPath>
         </Reference>
       </ItemGroup>
     </Otherwise>
