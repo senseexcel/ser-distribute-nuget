@@ -63,7 +63,7 @@
                 path = files.FirstOrDefault()?.FullName;
             }
 
-            logger.Factory.Configuration = new XmlLoggingConfiguration(path, false);
+            logger.Factory.Configuration = new XmlLoggingConfiguration(path);
         }
     }
 }
