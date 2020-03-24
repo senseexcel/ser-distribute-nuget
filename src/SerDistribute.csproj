@@ -15,10 +15,6 @@
     <StartupObject />
   </PropertyGroup>
 
-  <ItemGroup>
-    <Folder Include="Properties\" />
-  </ItemGroup>
-
   <Choose>
     <When Condition="'$(Configuration)' == 'Release'">
       <ItemGroup>
