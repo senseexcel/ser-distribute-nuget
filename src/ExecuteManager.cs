@@ -3,14 +3,12 @@
     #region Usings
     using System;
     using System.Linq;
-    using System.Reflection;
     using System.Collections.Generic;
     using System.IO;
     using System.Net.Mail;
     using System.Net.Http;
     using System.Threading.Tasks;
     using System.Net;
-    using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using NLog;
     using Markdig;
@@ -47,7 +45,7 @@
         {
             try
             {
-                var result = UriUtils.NormalizeUri(path);
+                var result = HelperUtilities.NormalizeUri(path);
                 var libUri = result.Item1;
 
                 var connections = fileConnection?.CurrentApp?.GetConnectionsAsync().Result ?? null;
@@ -119,6 +117,7 @@
         }
         #endregion
 
+        #region Public Methods
         public List<FileResult> CopyFile(FileSettings settings, Report report, Q2g.HelperQlik.Connection fileConnection)
         {
             var fileResults = new List<FileResult>();
@@ -529,7 +528,7 @@
                     }
                     mailMessage.Dispose();
                     client.Dispose();
-                    
+
                     mailResults.Add(mailResult);
                 }
                 return mailResults;
@@ -547,5 +546,6 @@
                 return mailResults;
             }
         }
+        #endregion
     }
 }

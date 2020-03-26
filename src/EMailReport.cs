@@ -2,10 +2,8 @@
 {
     #region Usings
     using Ser.Api;
-    using System;
     using System.Collections.Generic;
     using System.Net.Mail;
-    using System.Text;
     using Newtonsoft.Json.Linq;
     using System.IO;
     #endregion

@@ -1,13 +1,8 @@
 ﻿namespace Ser.Distribute
-{  
+{
     #region Usings
     using System;
-    using System.Collections.Generic;
     using System.IO;
-    using System.Linq;
-    using System.Text;
-    using System.Threading.Tasks;
-    using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using NLog;
     using Q2g.HelperPem;
@@ -53,7 +48,7 @@
             {
                 ResolveInternal(jtoken.Children());
             }
-            else if(jtoken.Type == JTokenType.Object)
+            else if (jtoken.Type == JTokenType.Object)
             {
                 ResolveInternal(jtoken.Children());
             }

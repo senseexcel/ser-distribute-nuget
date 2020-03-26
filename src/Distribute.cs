@@ -5,7 +5,6 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Text;
     using System.Threading.Tasks;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
@@ -134,7 +133,7 @@
                                         //Copy reports
                                         logger.Info("Check - Copy Files...");
                                         var fileSettings = GetSettings<FileSettings>(location);
-                                        var fileConfigs = JsonConvert.DeserializeObject<List<ConnectionConfig>>(JsonConvert.SerializeObject(fileSettings?.Connections ?? new List<SerConnection>()));
+                                        var fileConfigs = JsonConvert.DeserializeObject<List<SerConnection>>(JsonConvert.SerializeObject(fileSettings?.Connections ?? new List<SerConnection>()));
                                         var fileConnection = connectionManager.GetConnection(fileConfigs);
                                         results.FileResults.AddRange(execute.CopyFile(fileSettings, report, fileConnection));
                                         break;
@@ -142,7 +141,7 @@
                                         //Upload to hub
                                         logger.Info("Check - Upload to hub...");
                                         var hubSettings = GetSettings<HubSettings>(location);
-                                        var hubConfigs = JsonConvert.DeserializeObject<List<ConnectionConfig>>(JsonConvert.SerializeObject(hubSettings?.Connections ?? new List<SerConnection>()));
+                                        var hubConfigs = JsonConvert.DeserializeObject<List<SerConnection>>(JsonConvert.SerializeObject(hubSettings?.Connections ?? new List<SerConnection>()));
                                         connectionManager.LoadConnections(hubConfigs, 1);
                                         var hubConnection = connectionManager.GetConnection(hubConfigs);
                                         if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
