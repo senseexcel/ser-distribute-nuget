@@ -1,11 +1,8 @@
 ﻿namespace Ser.Distribute
 {
     #region Usings
-    using System;
     using System.Collections.Generic;
-    using System.Text;
     using Newtonsoft.Json;
-    using Newtonsoft.Json.Linq;
     using Newtonsoft.Json.Serialization;
     #endregion
 
@@ -37,8 +34,8 @@
 
     [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,
                 NamingStrategyType = typeof(CamelCaseNamingStrategy))]
-    public class MailResult : BaseResult 
-    { 
+    public class MailResult : BaseResult
+    {
         public string To { get; set; }
         public string Subject { get; set; }
     }
