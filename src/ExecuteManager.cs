@@ -423,9 +423,9 @@
             try
             {
                 var mailList = new List<EMailReport>();
-                var reportNames = new StringBuilder();
                 foreach (var mailSettings in settingsList)
                 {
+                    var reportNames = new StringBuilder();
                     foreach (var report in mailSettings.MailReports)
                     {
                         foreach (var path in report.Paths)
