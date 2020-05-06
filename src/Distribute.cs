@@ -135,6 +135,8 @@
                                         var fileSettings = GetSettings<FileSettings>(location);
                                         var fileConfigs = JsonConvert.DeserializeObject<List<SerConnection>>(JsonConvert.SerializeObject(fileSettings?.Connections ?? new List<SerConnection>()));
                                         var fileConnection = connectionManager.GetConnection(fileConfigs);
+                                        if (fileConnection == null)
+                                            throw new Exception("Could not create a connection to Qlik. (FILE)");
                                         results.FileResults.AddRange(execute.CopyFile(fileSettings, report, fileConnection));
                                         break;
                                     case SettingsType.HUB:
@@ -144,6 +146,8 @@
                                         var hubConfigs = JsonConvert.DeserializeObject<List<SerConnection>>(JsonConvert.SerializeObject(hubSettings?.Connections ?? new List<SerConnection>()));
                                         connectionManager.LoadConnections(hubConfigs, 1);
                                         var hubConnection = connectionManager.GetConnection(hubConfigs);
+                                        if(hubConnection == null)
+                                            throw new Exception("Could not create a connection to Qlik. (HUB)");
                                         if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
                                             execute.DeleteReportsFromHub(hubSettings, jobResult, hubConnection);
                                         var task = execute.UploadToHub(hubSettings, report, hubConnection);
