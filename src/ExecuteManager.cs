@@ -286,7 +286,7 @@
                                     var filter = $"userId eq '{hubUser.UserId}' and userDirectory eq '{hubUser.UserDirectory}'";
                                     var result = hub.SendRequestAsync("user", HttpMethod.Get, null, filter).Result;
                                     if (result == null || result == "[]")
-                                        throw new Exception($"Qlik user {settings.Owner} over qrs not found or session not connected.");
+                                        throw new Exception($"Qlik user {settings.Owner} was not found or session not connected (QRS).");
                                     var userObject = JArray.Parse(result);
                                     if (userObject.Count > 1)
                                         throw new Exception($"Too many User found. {result}");
