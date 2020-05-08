@@ -14,10 +14,14 @@
     using System.Threading;
     #endregion
 
-    public class Distribute
+    public class DistributeManager
     {
         #region Logger
         private static Logger logger = LogManager.GetCurrentClassLogger();
+        #endregion
+
+        #region Properties
+        public string ErrorMessage { get; private set; }
         #endregion
 
         private T GetSettings<T>(JToken json, bool typeOnly = false) where T : ISettings, new()
@@ -133,17 +137,23 @@
                                         //Copy reports
                                         logger.Info("Check - Copy Files...");
                                         var fileSettings = GetSettings<FileSettings>(location);
+                                        fileSettings.Type = SettingsType.FILE;
                                         var fileConfigs = JsonConvert.DeserializeObject<List<SerConnection>>(JsonConvert.SerializeObject(fileSettings?.Connections ?? new List<SerConnection>()));
                                         var fileConnection = connectionManager.GetConnection(fileConfigs);
+                                        if (fileConnection == null)
+                                            throw new Exception("Could not create a connection to Qlik. (FILE)");
                                         results.FileResults.AddRange(execute.CopyFile(fileSettings, report, fileConnection));
                                         break;
                                     case SettingsType.HUB:
                                         //Upload to hub
                                         logger.Info("Check - Upload to hub...");
                                         var hubSettings = GetSettings<HubSettings>(location);
+                                        hubSettings.Type = SettingsType.HUB;
                                         var hubConfigs = JsonConvert.DeserializeObject<List<SerConnection>>(JsonConvert.SerializeObject(hubSettings?.Connections ?? new List<SerConnection>()));
                                         connectionManager.LoadConnections(hubConfigs, 1);
                                         var hubConnection = connectionManager.GetConnection(hubConfigs);
+                                        if(hubConnection == null)
+                                            throw new Exception("Could not create a connection to Qlik. (HUB)");
                                         if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
                                             execute.DeleteReportsFromHub(hubSettings, jobResult, hubConnection);
                                         var task = execute.UploadToHub(hubSettings, report, hubConnection);
@@ -154,6 +164,7 @@
                                         //Cache mail infos
                                         logger.Info("Check - Cache Mail...");
                                         var mailSettings = GetSettings<MailSettings>(location);
+                                        mailSettings.Type = SettingsType.MAIL;
                                         mailSettings.MailReports.Add(report);
                                         mailList.Add(mailSettings);
                                         break;
@@ -186,11 +197,13 @@
             catch (OperationCanceledException ex)
             {
                 logger.Error(ex, "Distibute was canceled.");
+                ErrorMessage = ex.Message;
                 return null;
             }
             catch (Exception ex)
             {
                 logger.Error(ex, "Can´t read job results.");
+                ErrorMessage = ex.Message;
                 return null;
             }
             finally

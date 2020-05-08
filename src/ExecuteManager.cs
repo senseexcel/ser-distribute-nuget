@@ -16,6 +16,8 @@
     using Q2g.HelperQrs;
     using Q2g.HelperQlik;
     using System.Text;
+    using System.Runtime.InteropServices;
+    using System.Text.RegularExpressions;
     #endregion
 
     public class ExecuteManager
@@ -115,6 +117,11 @@
                 return false;
             }
         }
+
+        private string NormalizeReportName(string filename)
+        {
+            return string.Join("_", filename.Split(Path.GetInvalidFileNameChars()));
+        }
         #endregion
 
         #region Public Methods
@@ -156,15 +163,16 @@
                 }
 
                 logger.Info($"Resolve target path: \"{targetPath}\".");
+               
                 var fileCount = 0;
                 foreach (var reportPath in report.Paths)
                 {
                     if (report.Paths.Count > 1)
                         fileCount++;
                     var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
-                    var targetFile = Path.Combine(targetPath, $"{reportName}{Path.GetExtension(reportPath)}");
+                    var targetFile = Path.Combine(targetPath, $"{NormalizeReportName(reportName)}{Path.GetExtension(reportPath)}");
                     if (fileCount > 0)
-                        targetFile = Path.Combine(targetPath, $"{reportName}_{fileCount}{Path.GetExtension(reportPath)}");
+                        targetFile = Path.Combine(targetPath, $"{NormalizeReportName(reportName)}_{fileCount}{Path.GetExtension(reportPath)}");
                     logger.Debug($"copy mode {settings.Mode}");
                     switch (settings.Mode)
                     {
@@ -285,8 +293,8 @@
                                     hubUser = new DomainUser(settings.Owner);
                                     var filter = $"userId eq '{hubUser.UserId}' and userDirectory eq '{hubUser.UserDirectory}'";
                                     var result = hub.SendRequestAsync("user", HttpMethod.Get, null, filter).Result;
-                                    if (result == null)
-                                        throw new Exception($"Qlik user {settings.Owner} with qrs not found or session not connected.");
+                                    if (result == null || result == "[]")
+                                        throw new Exception($"Qlik user {settings.Owner} was not found or session not connected (QRS).");
                                     var userObject = JArray.Parse(result);
                                     if (userObject.Count > 1)
                                         throw new Exception($"Too many User found. {result}");
@@ -415,9 +423,9 @@
             try
             {
                 var mailList = new List<EMailReport>();
-                var reportNames = new StringBuilder();
                 foreach (var mailSettings in settingsList)
                 {
+                    var reportNames = new StringBuilder();
                     foreach (var report in mailSettings.MailReports)
                     {
                         foreach (var path in report.Paths)
