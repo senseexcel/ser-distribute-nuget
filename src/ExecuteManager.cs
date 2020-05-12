@@ -379,7 +379,8 @@
                                 // get fresh shared content infos
                                 var filename = Path.GetFileName(fileData.Filename);
                                 hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
-                                uploadResult.Link = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains($"/{filename}"))?.ExternalPath ?? null;
+                                var link = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains($"/{filename}"))?.ExternalPath ?? null;
+                                uploadResult.Link = link ?? throw new Exception($"The download link is null (Name: {filename} - References: {hubInfo?.References?.Count}).");
                                 uploadResult.Message = $"Upload {contentName} successful.";
                                 uploadResult.Success = true;
                                 return uploadResult;
