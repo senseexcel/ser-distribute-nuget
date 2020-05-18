@@ -52,7 +52,7 @@
             }
         }
 
-        public string Run(string resultFolder, string privateKeyPath = null)
+        public string Run(string resultFolder, DomainUser sessionUser, string privateKeyPath = null)
         {
             try
             {
@@ -82,7 +82,7 @@
                     }
                     jobResults.Add(result);
                 }
-                return Run(jobResults, privateKeyPath);
+                return Run(jobResults, sessionUser, privateKeyPath);
             }
             catch (Exception ex)
             {
@@ -91,7 +91,7 @@
             }
         }
 
-        public string Run(List<JobResult> jobResults, string privateKeyPath = null, CancellationToken? token = null)
+        public string Run(List<JobResult> jobResults, DomainUser sessionUser, string privateKeyPath = null, CancellationToken? token = null)
         {
             var results = new DistributeResults();
             var connectionManager = new ConnectionManager();
@@ -155,7 +155,7 @@
                                         if(hubConnection == null)
                                             throw new Exception("Could not create a connection to Qlik. (HUB)");
                                         if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
-                                            execute.DeleteReportsFromHub(hubSettings, jobResult, hubConnection);
+                                            execute.DeleteReportsFromHub(hubSettings, jobResult, hubConnection, sessionUser);
                                         var task = execute.UploadToHub(hubSettings, report, hubConnection);
                                         if (task != null)
                                             uploadTasks.Add(task);

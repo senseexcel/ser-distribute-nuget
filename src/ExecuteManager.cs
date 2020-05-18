@@ -211,7 +211,7 @@
             }
         }
 
-        public void DeleteReportsFromHub(HubSettings settings, JobResult jobResult, Q2g.HelperQlik.Connection hubConnection)
+        public void DeleteReportsFromHub(HubSettings settings, JobResult jobResult, Q2g.HelperQlik.Connection hubConnection, DomainUser sessionUser)
         {
             try
             {
@@ -239,7 +239,7 @@
                             var serMetaType = sharedContent.MetaData.Where(m => m.Key == "ser-type" && m.Value == "report").SingleOrDefault() ?? null;
                             if (sharedContent.MetaData == null)
                                 serMetaType = new MetaData();
-                            if (serMetaType != null && sharedContent.Owner.ToString() == settings.SessionUser.ToString())
+                            if (serMetaType != null && sharedContent.Owner.ToString() == sessionUser.ToString())
                                 hub.DeleteSharedContentAsync(new HubDeleteRequest() { Id = sharedContent.Id.Value }).Wait();
                         }
                     }
