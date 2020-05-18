@@ -221,7 +221,6 @@
                     return;
                 }
 
-                var hubUser = new DomainUser(settings.Owner);
                 var hubUri = Q2g.HelperQlik.Connection.BuildQrsUri(hubConnection.ConnectUri, hubConnection.Config.ServerUri);
                 var hub = new QlikQrsHub(hubUri, hubConnection.ConnectCookie);
                 var sharedContentInfos = hub.GetSharedContentAsync(new HubSelectRequest())?.Result;
@@ -240,8 +239,7 @@
                             var serMetaType = sharedContent.MetaData.Where(m => m.Key == "ser-type" && m.Value == "report").SingleOrDefault() ?? null;
                             if (sharedContent.MetaData == null)
                                 serMetaType = new MetaData();
-
-                            if (serMetaType != null && sharedContent.Owner.ToString() == hubUser.ToString())
+                            if (serMetaType != null && sharedContent.Owner.ToString() == settings.SessionUser.ToString())
                                 hub.DeleteSharedContentAsync(new HubDeleteRequest() { Id = sharedContent.Id.Value }).Wait();
                         }
                     }
