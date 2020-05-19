@@ -7,7 +7,7 @@
 
     public class DistibuteOptions
     {
-        public DomainUser sessionUser { get; set; }
+        public DomainUser SessionUser { get; set; }
         public string PrivateKeyPath { get; set; }
         public CancellationToken? CancelToken { get; set; }
     }
