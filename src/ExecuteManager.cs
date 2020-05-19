@@ -258,7 +258,7 @@
             }
         }
 
-        public Task<HubResult> UploadToHub(HubSettings settings, Report report, Q2g.HelperQlik.Connection hubConnection)
+        public Task<HubResult> UploadToHub(HubSettings settings, Report report, Q2g.HelperQlik.Connection hubConnection, DomainUser sessionUser)
         {
             var hubResult = new HubResult();
             var reportName = report?.Name ?? null;
@@ -289,7 +289,7 @@
                             {
                                 HubInfo hubInfo = null;
                                 Guid? hubUserId = null;
-                                DomainUser hubUser = null;
+                                DomainUser hubUser = sessionUser;
                                 if (settings.Owner != null)
                                 {
                                     hubUser = new DomainUser(settings.Owner);
@@ -311,7 +311,9 @@
                                         Name = contentName,
                                         ReportType = settings.SharedContentType,
                                         Description = "Created by Sense Excel Reporting",
-                                        Tags = new List<Tag>() { new Tag()
+                                        Tags = new List<Tag>() 
+                                        { 
+                                            new Tag()
                                             {
                                                  Name = "SER",
                                                  CreatedDate = DateTime.Now,

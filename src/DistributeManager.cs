@@ -156,7 +156,7 @@
                                             throw new Exception("Could not create a connection to Qlik. (HUB)");
                                         if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
                                             execute.DeleteReportsFromHub(hubSettings, jobResult, hubConnection, options.SessionUser);
-                                        var task = execute.UploadToHub(hubSettings, report, hubConnection);
+                                        var task = execute.UploadToHub(hubSettings, report, hubConnection, options.SessionUser);
                                         if (task != null)
                                             uploadTasks.Add(task);
                                         break;
