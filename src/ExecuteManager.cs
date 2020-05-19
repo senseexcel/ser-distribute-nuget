@@ -384,7 +384,7 @@
                                 var filename = Path.GetFileName(fileData.Filename);
                                 hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
                                 var link = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains($"/{filename}"))?.ExternalPath ?? null;
-                                uploadResult.Link = link ?? throw new Exception($"The download link is null (Name: {filename} - References: {hubInfo?.References?.Count}).");
+                                uploadResult.Link = link ?? throw new Exception($"The download link is empty. Please check the security rules. (Name: {filename} - References: {hubInfo?.References?.Count}) - User: {hubUser}.");
                                 uploadResult.Message = $"Upload {contentName} successful.";
                                 uploadResult.Success = true;
                                 return uploadResult;
