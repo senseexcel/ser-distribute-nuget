@@ -305,6 +305,7 @@
                                         throw new Exception($"Too many User found. {result}");
                                     else if (userObject.Count == 1)
                                         hubUserId = new Guid(userObject.First()["id"].ToString());
+                                    logger.Debug($"hubUser id is '{hubUserId}'.");
                                 }
                                 var sharedContent = GetSharedContentFromUser(hub, contentName, hubUser);
                                 if (sharedContent == null)
@@ -369,6 +370,7 @@
                                 if (hubUserId != null)
                                 {
                                     //change shared content owner
+                                    logger.Debug($"Change shared content owner {hubUserId} (User: '{hubUser}').");
                                     var newHubInfo = new HubInfo()
                                     {
                                         Id = hubInfo.Id,
@@ -386,7 +388,9 @@
                                     {
                                         Info = newHubInfo,
                                     };
-                                    hub.UpdateSharedContentAsync(changeRequest).Wait();
+                                    logger.Debug($"Update Owner request '{JsonConvert.SerializeObject(changeRequest)}'");
+                                    var ownerResult = hub.UpdateSharedContentAsync(changeRequest).Result;
+                                    logger.Debug($"Update Owner response '{JsonConvert.SerializeObject(ownerResult)}'");
                                 }
 
                                 // get fresh shared content infos
