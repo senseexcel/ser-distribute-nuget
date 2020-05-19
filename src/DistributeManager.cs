@@ -9,9 +9,9 @@
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using NLog;
-    using Ser.Api;
     using Q2g.HelperQlik;
     using System.Threading;
+    using Ser.Api;
     #endregion
 
     public class DistributeManager
