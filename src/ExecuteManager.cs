@@ -18,6 +18,7 @@
     using System.Text;
     using System.Runtime.InteropServices;
     using System.Text.RegularExpressions;
+    using Newtonsoft.Json;
     #endregion
 
     public class ExecuteManager
@@ -292,9 +293,11 @@
                                 DomainUser hubUser = sessionUser;
                                 if (settings.Owner != null)
                                 {
+                                    logger.Debug($"Use Owner '{settings.Owner}'.");
                                     hubUser = new DomainUser(settings.Owner);
                                     var filter = $"userId eq '{hubUser.UserId}' and userDirectory eq '{hubUser.UserDirectory}'";
                                     var result = hub.SendRequestAsync("user", HttpMethod.Get, null, filter).Result;
+                                    logger.Debug($"User result: {result}");
                                     if (result == null || result == "[]")
                                         throw new Exception($"Qlik user {settings.Owner} was not found or session not connected (QRS).");
                                     var userObject = JArray.Parse(result);
@@ -327,7 +330,10 @@
                                             FileData = fileData.DownloadData,
                                         }
                                     };
+
+                                    logger.Debug($"Create request '{JsonConvert.SerializeObject(createRequest)}'");
                                     hubInfo = hub.CreateSharedContentAsync(createRequest).Result;
+                                    logger.Debug($"Create response '{JsonConvert.SerializeObject(hubInfo)}'");
                                 }
                                 else
                                 {
@@ -349,7 +355,10 @@
                                                 FileData = fileData.DownloadData,
                                             }
                                         };
+
+                                        logger.Debug($"Update request '{JsonConvert.SerializeObject(updateRequest)}'");
                                         hubInfo = hub.UpdateSharedContentAsync(updateRequest).Result;
+                                        logger.Debug($"Update response '{JsonConvert.SerializeObject(hubInfo)}'");
                                     }
                                     else
                                     {
@@ -383,6 +392,7 @@
                                 // get fresh shared content infos
                                 var filename = Path.GetFileName(fileData.Filename);
                                 hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
+                                logger.Debug("Get shared content link.");
                                 var link = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains($"/{filename}"))?.ExternalPath ?? null;
                                 uploadResult.Link = link ?? throw new Exception($"The download link is empty. Please check the security rules. (Name: {filename} - References: {hubInfo?.References?.Count}) - User: {hubUser}.");
                                 uploadResult.Message = $"Upload {contentName} successful.";
