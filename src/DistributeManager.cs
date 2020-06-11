@@ -9,9 +9,9 @@
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using NLog;
-    using Ser.Api;
     using Q2g.HelperQlik;
     using System.Threading;
+    using Ser.Api;
     #endregion
 
     public class DistributeManager
@@ -52,7 +52,7 @@
             }
         }
 
-        public string Run(string resultFolder, string privateKeyPath = null)
+        public string Run(string resultFolder, DistibuteOptions options)
         {
             try
             {
@@ -82,7 +82,7 @@
                     }
                     jobResults.Add(result);
                 }
-                return Run(jobResults, privateKeyPath);
+                return Run(jobResults, options);
             }
             catch (Exception ex)
             {
@@ -91,7 +91,7 @@
             }
         }
 
-        public string Run(List<JobResult> jobResults, string privateKeyPath = null, CancellationToken? token = null)
+        public string Run(List<JobResult> jobResults, DistibuteOptions options)
         {
             var results = new DistributeResults();
             var connectionManager = new ConnectionManager();
@@ -103,7 +103,7 @@
                 foreach (var jobResult in jobResults)
                 {
                     //Check Cancel
-                    token?.ThrowIfCancellationRequested();
+                    options.CancelToken?.ThrowIfCancellationRequested();
 
                     if (jobResult.Status != TaskStatusInfo.SUCCESS)
                     {
@@ -117,16 +117,16 @@
                     foreach (var report in jobResult.Reports)
                     {
                         //Check Cancel
-                        token?.ThrowIfCancellationRequested();
+                        options.CancelToken?.ThrowIfCancellationRequested();
 
                         var distribute = report?.Distribute ?? null;
-                        var resolver = new CryptoResolver(privateKeyPath);
+                        var resolver = new CryptoResolver(options.PrivateKeyPath);
                         distribute = resolver.Resolve(distribute);
                         var locations = distribute?.Children().ToList() ?? new List<JToken>();
                         foreach (var location in locations)
                         {
                             //Check Cancel
-                            token?.ThrowIfCancellationRequested();
+                            options.CancelToken?.ThrowIfCancellationRequested();
 
                             var settings = GetSettings<BaseDeliverySettings>(location, true);
                             if (settings.Active ?? true)
@@ -155,8 +155,8 @@
                                         if(hubConnection == null)
                                             throw new Exception("Could not create a connection to Qlik. (HUB)");
                                         if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
-                                            execute.DeleteReportsFromHub(hubSettings, jobResult, hubConnection);
-                                        var task = execute.UploadToHub(hubSettings, report, hubConnection);
+                                            execute.DeleteReportsFromHub(hubSettings, jobResult, hubConnection, options.SessionUser);
+                                        var task = execute.UploadToHub(hubSettings, report, hubConnection, options.SessionUser);
                                         if (task != null)
                                             uploadTasks.Add(task);
                                         break;

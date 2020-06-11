@@ -18,6 +18,7 @@
     using System.Text;
     using System.Runtime.InteropServices;
     using System.Text.RegularExpressions;
+    using Newtonsoft.Json;
     #endregion
 
     public class ExecuteManager
@@ -211,7 +212,7 @@
             }
         }
 
-        public void DeleteReportsFromHub(HubSettings settings, JobResult jobResult, Q2g.HelperQlik.Connection hubConnection)
+        public void DeleteReportsFromHub(HubSettings settings, JobResult jobResult, Q2g.HelperQlik.Connection hubConnection, DomainUser sessionUser)
         {
             try
             {
@@ -221,7 +222,10 @@
                     return;
                 }
 
-                var hubUser = new DomainUser(settings.Owner);
+                var reportOwner = sessionUser.ToString();
+                if (settings.Owner != null)
+                    reportOwner = settings.Owner;
+
                 var hubUri = Q2g.HelperQlik.Connection.BuildQrsUri(hubConnection.ConnectUri, hubConnection.Config.ServerUri);
                 var hub = new QlikQrsHub(hubUri, hubConnection.ConnectCookie);
                 var sharedContentInfos = hub.GetSharedContentAsync(new HubSelectRequest())?.Result;
@@ -240,8 +244,7 @@
                             var serMetaType = sharedContent.MetaData.Where(m => m.Key == "ser-type" && m.Value == "report").SingleOrDefault() ?? null;
                             if (sharedContent.MetaData == null)
                                 serMetaType = new MetaData();
-
-                            if (serMetaType != null && sharedContent.Owner.ToString() == hubUser.ToString())
+                            if (serMetaType != null && sharedContent.Owner.ToString().ToLowerInvariant() == reportOwner.ToLowerInvariant())
                                 hub.DeleteSharedContentAsync(new HubDeleteRequest() { Id = sharedContent.Id.Value }).Wait();
                         }
                     }
@@ -256,7 +259,7 @@
             }
         }
 
-        public Task<HubResult> UploadToHub(HubSettings settings, Report report, Q2g.HelperQlik.Connection hubConnection)
+        public Task<HubResult> UploadToHub(HubSettings settings, Report report, Q2g.HelperQlik.Connection hubConnection, DomainUser sessionUser)
         {
             var hubResult = new HubResult();
             var reportName = report?.Name ?? null;
@@ -287,12 +290,14 @@
                             {
                                 HubInfo hubInfo = null;
                                 Guid? hubUserId = null;
-                                DomainUser hubUser = null;
+                                DomainUser hubUser = sessionUser;
                                 if (settings.Owner != null)
                                 {
+                                    logger.Debug($"Use Owner '{settings.Owner}'.");
                                     hubUser = new DomainUser(settings.Owner);
                                     var filter = $"userId eq '{hubUser.UserId}' and userDirectory eq '{hubUser.UserDirectory}'";
                                     var result = hub.SendRequestAsync("user", HttpMethod.Get, null, filter).Result;
+                                    logger.Debug($"User result: {result}");
                                     if (result == null || result == "[]")
                                         throw new Exception($"Qlik user {settings.Owner} was not found or session not connected (QRS).");
                                     var userObject = JArray.Parse(result);
@@ -300,6 +305,7 @@
                                         throw new Exception($"Too many User found. {result}");
                                     else if (userObject.Count == 1)
                                         hubUserId = new Guid(userObject.First()["id"].ToString());
+                                    logger.Debug($"hubUser id is '{hubUserId}'.");
                                 }
                                 var sharedContent = GetSharedContentFromUser(hub, contentName, hubUser);
                                 if (sharedContent == null)
@@ -309,7 +315,9 @@
                                         Name = contentName,
                                         ReportType = settings.SharedContentType,
                                         Description = "Created by Sense Excel Reporting",
-                                        Tags = new List<Tag>() { new Tag()
+                                        Tags = new List<Tag>() 
+                                        { 
+                                            new Tag()
                                             {
                                                  Name = "SER",
                                                  CreatedDate = DateTime.Now,
@@ -323,7 +331,10 @@
                                             FileData = fileData.DownloadData,
                                         }
                                     };
+
+                                    logger.Debug($"Create request '{JsonConvert.SerializeObject(createRequest)}'");
                                     hubInfo = hub.CreateSharedContentAsync(createRequest).Result;
+                                    logger.Debug($"Create response '{JsonConvert.SerializeObject(hubInfo)}'");
                                 }
                                 else
                                 {
@@ -345,7 +356,10 @@
                                                 FileData = fileData.DownloadData,
                                             }
                                         };
+
+                                        logger.Debug($"Update request '{JsonConvert.SerializeObject(updateRequest)}'");
                                         hubInfo = hub.UpdateSharedContentAsync(updateRequest).Result;
+                                        logger.Debug($"Update response '{JsonConvert.SerializeObject(hubInfo)}'");
                                     }
                                     else
                                     {
@@ -356,6 +370,7 @@
                                 if (hubUserId != null)
                                 {
                                     //change shared content owner
+                                    logger.Debug($"Change shared content owner {hubUserId} (User: '{hubUser}').");
                                     var newHubInfo = new HubInfo()
                                     {
                                         Id = hubInfo.Id,
@@ -373,13 +388,17 @@
                                     {
                                         Info = newHubInfo,
                                     };
-                                    hub.UpdateSharedContentAsync(changeRequest).Wait();
+                                    logger.Debug($"Update Owner request '{JsonConvert.SerializeObject(changeRequest)}'");
+                                    var ownerResult = hub.UpdateSharedContentAsync(changeRequest).Result;
+                                    logger.Debug($"Update Owner response '{JsonConvert.SerializeObject(ownerResult)}'");
                                 }
 
                                 // get fresh shared content infos
                                 var filename = Path.GetFileName(fileData.Filename);
                                 hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
-                                uploadResult.Link = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains($"/{filename}"))?.ExternalPath ?? null;
+                                logger.Debug("Get shared content link.");
+                                var link = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains($"/{filename}"))?.ExternalPath ?? null;
+                                uploadResult.Link = link ?? throw new Exception($"The download link is empty. Please check the security rules. (Name: {filename} - References: {hubInfo?.References?.Count}) - User: {hubUser}.");
                                 uploadResult.Message = $"Upload {contentName} successful.";
                                 uploadResult.Success = true;
                                 return uploadResult;
