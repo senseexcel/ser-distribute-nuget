@@ -17,7 +17,7 @@
     public class DistributeManager
     {
         #region Logger
-        private static Logger logger = LogManager.GetCurrentClassLogger();
+        private readonly static Logger logger = LogManager.GetCurrentClassLogger();
         #endregion
 
         #region Properties
@@ -48,7 +48,7 @@
             catch (Exception ex)
             {
                 logger.Error(ex);
-                return default(T);
+                return default;
             }
         }
 
@@ -111,7 +111,6 @@
                         continue;
                     }
 
-                    execute.deleteFirst = false;
                     var mailList = new List<MailSettings>();
                     var uploadTasks = new List<Task<HubResult>>();
                     foreach (var report in jobResult.Reports)
@@ -155,10 +154,8 @@
                                         if(hubConnection == null)
                                             throw new Exception("Could not create a connection to Qlik. (HUB)");
                                         if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
-                                            execute.DeleteReportsFromHub(hubSettings, jobResult, hubConnection, options.SessionUser);
-                                        var task = execute.UploadToHub(hubSettings, report, hubConnection, options.SessionUser);
-                                        if (task != null)
-                                            uploadTasks.Add(task);
+                                            execute.DeleteReportsFromHub(hubSettings, report, hubConnection, options.SessionUser);
+                                        results.HubResults.AddRange(execute.UploadToHub(hubSettings, report, hubConnection, options.SessionUser));
                                         break;
                                     case SettingsType.MAIL:
                                         //Cache mail infos
@@ -175,13 +172,6 @@
                             }
                         }
                     }
-
-                    //Wait for all upload tasks
-                    Task.WaitAll(uploadTasks.ToArray());
-
-                    //Evaluation hub results
-                    foreach (var uploadTask in uploadTasks)
-                        results.HubResults.Add(uploadTask.Result);
 
                     //Send Mail
                     if (mailList.Count > 0)

@@ -19,23 +19,22 @@
     using System.Runtime.InteropServices;
     using System.Text.RegularExpressions;
     using Newtonsoft.Json;
+    using System.Web;
     #endregion
 
     public class ExecuteManager
     {
         #region Logger
-        private static Logger logger = LogManager.GetCurrentClassLogger();
+        private readonly static Logger logger = LogManager.GetCurrentClassLogger();
         #endregion
 
         #region Properties
-        public bool deleteFirst;
-        private Dictionary<string, string> pathMapper;
+        private readonly Dictionary<string, string> pathMapper;
         #endregion
 
         #region Constructor
         public ExecuteManager()
         {
-            deleteFirst = false;
             pathMapper = new Dictionary<string, string>();
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
             if (ServicePointManager.ServerCertificateValidationCallback == null)
@@ -44,7 +43,7 @@
         #endregion
 
         #region Private Methods
-        private string NormalizeLibPath(string path, FileSettings settings, Q2g.HelperQlik.Connection fileConnection)
+        private string NormalizeLibPath(string path, Connection fileConnection)
         {
             try
             {
@@ -157,14 +156,14 @@
                     targetPath = pathMapper[target];
                 else
                 {
-                    targetPath = NormalizeLibPath(target, settings, fileConnection);
+                    targetPath = NormalizeLibPath(target, fileConnection);
                     if (targetPath == null)
                         throw new Exception("The lib path could not be resolved.");
                     pathMapper.Add(target, targetPath);
                 }
 
                 logger.Info($"Resolve target path: \"{targetPath}\".");
-               
+
                 var fileCount = 0;
                 foreach (var reportPath in report.Paths)
                 {
@@ -212,45 +211,35 @@
             }
         }
 
-        public void DeleteReportsFromHub(HubSettings settings, JobResult jobResult, Q2g.HelperQlik.Connection hubConnection, DomainUser sessionUser)
+        public void DeleteReportsFromHub(HubSettings settings, Report report, Q2g.HelperQlik.Connection hubConnection, DomainUser sessionUser)
         {
             try
             {
-                if (deleteFirst)
-                {
-                    settings.Mode = DistributeMode.CREATEONLY;
-                    return;
-                }
-
                 var reportOwner = sessionUser.ToString();
                 if (settings.Owner != null)
                     reportOwner = settings.Owner;
 
-                var hubUri = Q2g.HelperQlik.Connection.BuildQrsUri(hubConnection.ConnectUri, hubConnection.Config.ServerUri);
+                var hubUri = Connection.BuildQrsUri(hubConnection.ConnectUri, hubConnection.Config.ServerUri);
                 var hub = new QlikQrsHub(hubUri, hubConnection.ConnectCookie);
                 var sharedContentInfos = hub.GetSharedContentAsync(new HubSelectRequest())?.Result;
                 if (sharedContentInfos == null)
                     logger.Debug("No shared content found.");
 
-                foreach (var report in jobResult.Reports)
+                foreach (var reportPath in report.Paths)
                 {
-                    foreach (var reportPath in report.Paths)
+                    var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
+                    var contentName = GetContentName(report?.Name ?? null, fileData);
+                    var sharedContentList = sharedContentInfos.Where(s => s.Name == contentName).ToList();
+                    foreach (var sharedContent in sharedContentList)
                     {
-                        var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
-                        var contentName = GetContentName(report?.Name ?? null, fileData);
-                        var sharedContentList = sharedContentInfos.Where(s => s.Name == contentName).ToList();
-                        foreach (var sharedContent in sharedContentList)
-                        {
-                            var serMetaType = sharedContent.MetaData.Where(m => m.Key == "ser-type" && m.Value == "report").SingleOrDefault() ?? null;
-                            if (sharedContent.MetaData == null)
-                                serMetaType = new MetaData();
-                            if (serMetaType != null && sharedContent.Owner.ToString().ToLowerInvariant() == reportOwner.ToLowerInvariant())
-                                hub.DeleteSharedContentAsync(new HubDeleteRequest() { Id = sharedContent.Id.Value }).Wait();
-                        }
+                        var serMetaType = sharedContent.MetaData.Where(m => m.Key == "ser-type" && m.Value == "report").SingleOrDefault() ?? null;
+                        if (sharedContent.MetaData == null)
+                            serMetaType = new MetaData();
+                        if (serMetaType != null && sharedContent.Owner.ToString().ToLowerInvariant() == reportOwner.ToLowerInvariant())
+                            hub.DeleteSharedContentAsync(new HubDeleteRequest() { Id = sharedContent.Id.Value }).Wait();
                     }
                 }
 
-                deleteFirst = true;
                 settings.Mode = DistributeMode.CREATEONLY;
             }
             catch (Exception ex)
@@ -259,64 +248,66 @@
             }
         }
 
-        public Task<HubResult> UploadToHub(HubSettings settings, Report report, Q2g.HelperQlik.Connection hubConnection, DomainUser sessionUser)
+        public List<HubResult> UploadToHub(HubSettings settings, Report report, Connection hubConnection, DomainUser sessionUser)
         {
             var hubResult = new HubResult();
             var reportName = report?.Name ?? null;
 
-            try
-            {
-                if (String.IsNullOrEmpty(reportName))
-                    throw new Exception("The report filename is empty.");
+            if (String.IsNullOrEmpty(reportName))
+                throw new Exception("The report filename is empty.");
 
-                var hubUri = Q2g.HelperQlik.Connection.BuildQrsUri(hubConnection.ConnectUri, hubConnection.Config.ServerUri);
-                var hub = new QlikQrsHub(hubUri, hubConnection.ConnectCookie);
-                foreach (var reportPath in report.Paths)
+            var hubUri = Connection.BuildQrsUri(hubConnection.ConnectUri, hubConnection.Config.ServerUri);
+            var hub = new QlikQrsHub(hubUri, hubConnection.ConnectCookie);
+            var results = new List<HubResult>();
+            foreach (var reportPath in report.Paths)
+            {
+                try
                 {
                     var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
                     var contentName = GetContentName(reportName, fileData);
 
+                    // Copy with report name - Important for other delivery options.
+                    var uploadCopyReportPath = Path.Combine(Path.GetDirectoryName(reportPath), $"{reportName}{Path.GetExtension(reportPath)}");
+                    File.Copy(reportPath, uploadCopyReportPath, true);
+
                     if (settings.Mode == DistributeMode.OVERRIDE ||
                         settings.Mode == DistributeMode.CREATEONLY)
                     {
-                        return Task.Run<HubResult>(() =>
+                        var uploadResult = new HubResult()
                         {
-                            var uploadResult = new HubResult()
-                            {
-                                ReportName = reportName,
-                            };
+                            ReportName = reportName,
+                        };
 
-                            try
+
+                        HubInfo hubInfo = null;
+                        Guid? hubUserId = null;
+                        DomainUser hubUser = sessionUser;
+                        if (settings.Owner != null)
+                        {
+                            logger.Debug($"Use Owner '{settings.Owner}'.");
+                            hubUser = new DomainUser(settings.Owner);
+                            var filter = $"userId eq '{hubUser.UserId}' and userDirectory eq '{hubUser.UserDirectory}'";
+                            var result = hub.SendRequestAsync("user", HttpMethod.Get, null, filter).Result;
+                            logger.Debug($"User result: {result}");
+                            if (result == null || result == "[]")
+                                throw new Exception($"Qlik user {settings.Owner} was not found or session not connected (QRS).");
+                            var userObject = JArray.Parse(result);
+                            if (userObject.Count > 1)
+                                throw new Exception($"Too many User found. {result}");
+                            else if (userObject.Count == 1)
+                                hubUserId = new Guid(userObject.First()["id"].ToString());
+                            logger.Debug($"hubUser id is '{hubUserId}'.");
+                        }
+                        var sharedContent = GetSharedContentFromUser(hub, contentName, hubUser);
+                        if (sharedContent == null)
+                        {
+                            var createRequest = new HubCreateRequest()
                             {
-                                HubInfo hubInfo = null;
-                                Guid? hubUserId = null;
-                                DomainUser hubUser = sessionUser;
-                                if (settings.Owner != null)
-                                {
-                                    logger.Debug($"Use Owner '{settings.Owner}'.");
-                                    hubUser = new DomainUser(settings.Owner);
-                                    var filter = $"userId eq '{hubUser.UserId}' and userDirectory eq '{hubUser.UserDirectory}'";
-                                    var result = hub.SendRequestAsync("user", HttpMethod.Get, null, filter).Result;
-                                    logger.Debug($"User result: {result}");
-                                    if (result == null || result == "[]")
-                                        throw new Exception($"Qlik user {settings.Owner} was not found or session not connected (QRS).");
-                                    var userObject = JArray.Parse(result);
-                                    if (userObject.Count > 1)
-                                        throw new Exception($"Too many User found. {result}");
-                                    else if (userObject.Count == 1)
-                                        hubUserId = new Guid(userObject.First()["id"].ToString());
-                                    logger.Debug($"hubUser id is '{hubUserId}'.");
-                                }
-                                var sharedContent = GetSharedContentFromUser(hub, contentName, hubUser);
-                                if (sharedContent == null)
-                                {
-                                    var createRequest = new HubCreateRequest()
-                                    {
-                                        Name = contentName,
-                                        ReportType = settings.SharedContentType,
-                                        Description = "Created by Sense Excel Reporting",
-                                        Tags = new List<Tag>() 
-                                        { 
+                                Name = contentName,
+                                ReportType = settings.SharedContentType,
+                                Description = "Created by Sense Excel Reporting",
+                                Tags = new List<Tag>()
+                                        {
                                             new Tag()
                                             {
                                                  Name = "SER",
@@ -324,112 +315,101 @@
                                                  ModifiedDate = DateTime.Now
                                             }
                                         },
-                                        Data = new ContentData()
-                                        {
-                                            ContentType = $"application/{Path.GetExtension(fileData.Filename).Trim('.')}",
-                                            ExternalPath = Path.GetFileName(fileData.Filename),
-                                            FileData = fileData.DownloadData,
-                                        }
-                                    };
-
-                                    logger.Debug($"Create request '{JsonConvert.SerializeObject(createRequest)}'");
-                                    hubInfo = hub.CreateSharedContentAsync(createRequest).Result;
-                                    logger.Debug($"Create response '{JsonConvert.SerializeObject(hubInfo)}'");
-                                }
-                                else
+                                Data = new ContentData()
                                 {
-                                    if (settings.Mode == DistributeMode.OVERRIDE)
-                                    {
-                                        var tag = sharedContent?.Tags?.FirstOrDefault(t => t.Name == "SER") ?? null;
-                                        if (tag != null)
-                                        {
-                                            tag.CreatedDate = DateTime.Now;
-                                            tag.ModifiedDate = DateTime.Now;
-                                        }
-                                        var updateRequest = new HubUpdateRequest()
-                                        {
-                                            Info = sharedContent,
-                                            Data = new ContentData()
-                                            {
-                                                ContentType = $"application/{Path.GetExtension(fileData.Filename).Trim('.')}",
-                                                ExternalPath = Path.GetFileName(fileData.Filename),
-                                                FileData = fileData.DownloadData,
-                                            }
-                                        };
-
-                                        logger.Debug($"Update request '{JsonConvert.SerializeObject(updateRequest)}'");
-                                        hubInfo = hub.UpdateSharedContentAsync(updateRequest).Result;
-                                        logger.Debug($"Update response '{JsonConvert.SerializeObject(hubInfo)}'");
-                                    }
-                                    else
-                                    {
-                                        throw new Exception($"The shared content {contentName} already exist.");
-                                    }
+                                    ContentType = $"application/{Path.GetExtension(fileData.Filename).Trim('.')}",
+                                    ExternalPath = Path.GetFileName(uploadCopyReportPath),
+                                    FileData = fileData.DownloadData,
                                 }
+                            };
 
-                                if (hubUserId != null)
+                            logger.Debug($"Create request '{JsonConvert.SerializeObject(createRequest)}'");
+                            hubInfo = hub.CreateSharedContentAsync(createRequest).Result;
+                            logger.Debug($"Create response '{JsonConvert.SerializeObject(hubInfo)}'");
+                        }
+                        else
+                        {
+                            if (settings.Mode == DistributeMode.OVERRIDE)
+                            {
+                                var tag = sharedContent?.Tags?.FirstOrDefault(t => t.Name == "SER") ?? null;
+                                if (tag != null)
                                 {
-                                    //change shared content owner
-                                    logger.Debug($"Change shared content owner {hubUserId} (User: '{hubUser}').");
-                                    var newHubInfo = new HubInfo()
-                                    {
-                                        Id = hubInfo.Id,
-                                        Type = settings.SharedContentType,
-                                        Owner = new Owner()
-                                        {
-                                            Id = hubUserId.ToString(),
-                                            UserId = hubUser.UserId,
-                                            UserDirectory = hubUser.UserDirectory,
-                                            Name = hubUser.UserId,
-                                        }
-                                    };
-
-                                    var changeRequest = new HubUpdateRequest()
-                                    {
-                                        Info = newHubInfo,
-                                    };
-                                    logger.Debug($"Update Owner request '{JsonConvert.SerializeObject(changeRequest)}'");
-                                    var ownerResult = hub.UpdateSharedContentAsync(changeRequest).Result;
-                                    logger.Debug($"Update Owner response '{JsonConvert.SerializeObject(ownerResult)}'");
+                                    tag.CreatedDate = DateTime.Now;
+                                    tag.ModifiedDate = DateTime.Now;
                                 }
+                                var updateRequest = new HubUpdateRequest()
+                                {
+                                    Info = sharedContent,
+                                    Data = new ContentData()
+                                    {
+                                        ContentType = $"application/{Path.GetExtension(fileData.Filename).Trim('.')}",
+                                        ExternalPath = Path.GetFileName(uploadCopyReportPath),
+                                        FileData = fileData.DownloadData,
+                                    }
+                                };
 
-                                // get fresh shared content infos
-                                var filename = Path.GetFileName(fileData.Filename);
-                                hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
-                                logger.Debug("Get shared content link.");
-                                var link = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains($"/{filename}"))?.ExternalPath ?? null;
-                                uploadResult.Link = link ?? throw new Exception($"The download link is empty. Please check the security rules. (Name: {filename} - References: {hubInfo?.References?.Count}) - User: {hubUser}.");
-                                uploadResult.Message = $"Upload {contentName} successful.";
-                                uploadResult.Success = true;
-                                return uploadResult;
+                                logger.Debug($"Update request '{JsonConvert.SerializeObject(updateRequest)}'");
+                                hubInfo = hub.UpdateSharedContentAsync(updateRequest).Result;
+                                logger.Debug($"Update response '{JsonConvert.SerializeObject(hubInfo)}'");
                             }
-                            catch (Exception ex)
+                            else
                             {
-                                logger.Error(ex, "The process could not be upload to the hub.");
-                                uploadResult.Success = false;
-                                uploadResult.Message = ex.Message;
-                                return uploadResult;
+                                throw new Exception($"The shared content {contentName} already exist.");
                             }
-                            finally
+                        }
+
+                        if (hubUserId != null)
+                        {
+                            //change shared content owner
+                            logger.Debug($"Change shared content owner {hubUserId} (User: '{hubUser}').");
+                            var newHubInfo = new HubInfo()
                             {
-                                hubConnection.IsFree = true;
-                            }
-                        });
+                                Id = hubInfo.Id,
+                                Type = settings.SharedContentType,
+                                Owner = new Owner()
+                                {
+                                    Id = hubUserId.ToString(),
+                                    UserId = hubUser.UserId,
+                                    UserDirectory = hubUser.UserDirectory,
+                                    Name = hubUser.UserId,
+                                }
+                            };
+
+                            var changeRequest = new HubUpdateRequest()
+                            {
+                                Info = newHubInfo,
+                            };
+                            logger.Debug($"Update Owner request '{JsonConvert.SerializeObject(changeRequest)}'");
+                            var ownerResult = hub.UpdateSharedContentAsync(changeRequest).Result;
+                            logger.Debug($"Update Owner response '{JsonConvert.SerializeObject(ownerResult)}'");
+                        }
+
+                        // Get fresh shared content infos
+                        var filename = Path.GetFileName(uploadCopyReportPath);
+                        filename = filename.Replace("+", " ");
+                        hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
+                        logger.Debug("Get shared content link.");
+                        var link = hubInfo?.References?.FirstOrDefault(r => r.LogicalPath.Contains($"/{filename}"))?.ExternalPath ?? null;
+                        if (link == null)
+                            throw new Exception($"The download link is empty. Please check the security rules. (Name: {filename} - References: {hubInfo?.References?.Count}) - User: {hubUser}.");
+                        results.Add(new HubResult() { Message = $"Upload {contentName} successful.", Success = true, Link = link });
                     }
                     else
                     {
                         throw new Exception($"Unknown hub mode {settings.Mode}");
                     }
                 }
-                return null;
+                catch (Exception ex)
+                {
+                    logger.Error(ex, "The process could not be upload to the hub.");
+                    results.Add(new HubResult() { Message = ex.Message, Success = false });
+                }
+                finally
+                {
+                    hubConnection.IsFree = true;
+                }
             }
-            catch (Exception ex)
-            {
-                logger.Error(ex, "The process could not be upload to the hub.");
-                hubResult.Success = false;
-                hubResult.Message = ex.Message;
-                return Task.FromResult(hubResult);
-            }
+            return results;
         }
 
         public List<MailResult> SendMails(List<MailSettings> settingsList)
