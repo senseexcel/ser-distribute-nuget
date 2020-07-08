@@ -276,6 +276,10 @@
                     var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
                     var contentName = GetContentName(reportName, fileData);
 
+                    // Copy with report name - Important for other delivery options.
+                    var uploadCopyReportPath = Path.Combine(Path.GetDirectoryName(reportPath), $"{reportName}{Path.GetExtension(reportPath)}");
+                    File.Copy(reportPath, uploadCopyReportPath, true);
+
                     if (settings.Mode == DistributeMode.OVERRIDE ||
                         settings.Mode == DistributeMode.CREATEONLY)
                     {
@@ -327,7 +331,7 @@
                                         Data = new ContentData()
                                         {
                                             ContentType = $"application/{Path.GetExtension(fileData.Filename).Trim('.')}",
-                                            ExternalPath = Path.GetFileName(fileData.Filename),
+                                            ExternalPath = Path.GetFileName(uploadCopyReportPath),
                                             FileData = fileData.DownloadData,
                                         }
                                     };
@@ -352,7 +356,7 @@
                                             Data = new ContentData()
                                             {
                                                 ContentType = $"application/{Path.GetExtension(fileData.Filename).Trim('.')}",
-                                                ExternalPath = Path.GetFileName(fileData.Filename),
+                                                ExternalPath = Path.GetFileName(uploadCopyReportPath),
                                                 FileData = fileData.DownloadData,
                                             }
                                         };
@@ -394,10 +398,10 @@
                                 }
 
                                 // get fresh shared content infos
-                                var filename = Path.GetFileName(fileData.Filename);
+                                var filename = Path.GetFileName(uploadCopyReportPath);
                                 hubInfo = GetSharedContentFromUser(hub, contentName, hubUser);
                                 logger.Debug("Get shared content link.");
-                                var link = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.ToLowerInvariant().Contains($"/{filename}"))?.ExternalPath ?? null;
+                                var link = hubInfo?.References?.FirstOrDefault(r => r.ExternalPath.Contains($"/{filename}"))?.ExternalPath ?? null;
                                 uploadResult.Link = link ?? throw new Exception($"The download link is empty. Please check the security rules. (Name: {filename} - References: {hubInfo?.References?.Count}) - User: {hubUser}.");
                                 uploadResult.Message = $"Upload {contentName} successful.";
                                 uploadResult.Success = true;
