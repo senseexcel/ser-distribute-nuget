@@ -20,6 +20,7 @@
     using System.Text.RegularExpressions;
     using Newtonsoft.Json;
     using System.Web;
+    using System.Security.Cryptography.X509Certificates;
     #endregion
 
     public class ExecuteManager
@@ -412,7 +413,7 @@
             return results;
         }
 
-        public List<MailResult> SendMails(List<MailSettings> settingsList)
+        public List<MailResult> SendMails(List<MailSettings> settingsList, DistibuteOptions options)
         {
             SmtpClient client = null;
             var mailMessage = new MailMessage();
@@ -512,6 +513,18 @@
 
                     logger.Debug($"Set SSL '{report.ServerSettings.UseSsl}'");
                     client.EnableSsl = report.ServerSettings.UseSsl;
+
+                    if(report.ServerSettings.UseCertificate)
+                    {
+                        logger.Info($"Search for email certificates with name 'mailcert.*'...");
+                        var certFiles = Directory.GetFiles(Path.GetDirectoryName(options.PrivateKeyPath), "mailcert.*", SearchOption.TopDirectoryOnly);
+                        foreach (var certFile in certFiles)
+                        {
+                            var x509File = new X509Certificate2(certFile);
+                            logger.Debug($"Add certificate '{certFile}'.");
+                            client.ClientCertificates.Add(x509File);
+                        }
+                    }
 
                     var delay = 0;
                     if (report.ServerSettings.SendDelay > 0)

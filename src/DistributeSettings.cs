@@ -269,6 +269,11 @@
         public bool UseSsl { get; set; }
 
         /// <summary>
+        /// Use ssl Certificate in Reporting Certificate Folder with Name 'mailcert' (optional).
+        /// </summary>
+        public bool UseCertificate { get; set; }
+
+        /// <summary>
         /// Use this property to send mail with a delay (optional).
         /// Value in seconds.
         /// </summary>

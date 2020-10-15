@@ -177,7 +177,7 @@
                     if (mailList.Count > 0)
                     {
                         logger.Info("Check - Send Mails...");
-                        results.MailResults.AddRange(execute.SendMails(mailList));
+                        results.MailResults.AddRange(execute.SendMails(mailList, options));
                     }
                 }
 
