@@ -520,6 +520,7 @@
                         var certFiles = Directory.GetFiles(Path.GetDirectoryName(options.PrivateKeyPath), "mailcert.*", SearchOption.TopDirectoryOnly);
                         foreach (var certFile in certFiles)
                         {
+                            logger.Debug($"Load certificate '{certFile}'.");
                             var x509File = new X509Certificate2(certFile);
                             logger.Debug($"Add certificate '{certFile}'.");
                             client.ClientCertificates.Add(x509File);
