@@ -21,6 +21,7 @@
     using Newtonsoft.Json;
     using System.Web;
     using System.Security.Cryptography.X509Certificates;
+    using FluentFTP;
     #endregion
 
     public class ExecuteManager
@@ -126,6 +127,87 @@
         #endregion
 
         #region Public Methods
+        public List<FTPResult> FtpUpload(FTPSettings settings, Report report)
+        {
+            var fileResults = new List<FTPResult>();
+            var reportName = report?.Name ?? null;
+            try
+            {
+                if (String.IsNullOrEmpty(reportName))
+                    throw new Exception("The report filename is empty.");
+
+                var target = settings?.Target?.Trim() ?? null;
+                if (target == null)
+                {
+                    var message = $"No target ftp path for report '{reportName}' found.";
+                    logger.Error(message);
+                    fileResults.Add(new FTPResult() { Success = false, Message = message, ReportName = reportName });
+                    return fileResults;
+                }
+
+                var ftpClient = new FtpClient(settings.Host, settings.Port, settings.UserName, settings.Password);
+                var ftpEncryptionMode = FtpEncryptionMode.None;
+                if (settings?.EncryptionMode != null)
+                    ftpEncryptionMode = (FtpEncryptionMode)Enum.Parse(typeof(FtpEncryptionMode), settings.EncryptionMode);
+                ftpClient.EncryptionMode = ftpEncryptionMode;
+                ftpClient.ValidateAnyCertificate = settings.UseSsl;
+                ftpClient.Connect();
+
+                var targetPath = String.Empty;
+                if (pathMapper.ContainsKey(target))
+                    targetPath = pathMapper[target];
+                else
+                {
+                    targetPath = target;
+                    pathMapper.Add(target, targetPath);
+                }
+
+                var fileCount = 0;
+                foreach (var reportPath in report.Paths)
+                {
+                    if (report.Paths.Count > 1)
+                        fileCount++;
+                    var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
+                    var targetFtpFile = $"{targetPath}/{NormalizeReportName(reportName)}{Path.GetExtension(reportPath)}";
+                    if (fileCount > 0)
+                        targetFtpFile = $"{targetPath}/{NormalizeReportName(reportName)}_{fileCount}{Path.GetExtension(reportPath)}";
+                    logger.Debug($"ftp distibute mode {settings.Mode}");
+
+                    var ftpRemoteExists = FtpRemoteExists.Overwrite;
+                    switch (settings.Mode)
+                    {
+                        case DistributeMode.CREATEONLY:
+                            ftpRemoteExists = FtpRemoteExists.Skip;
+                            break;
+                        case DistributeMode.DELETEALLFIRST:
+                            logger.Debug($"The FTP file '{targetFtpFile}' could not deleted.");
+                            ftpClient.DeleteFile(targetFtpFile);
+                            ftpRemoteExists = FtpRemoteExists.Skip;
+                            break;
+                        case DistributeMode.OVERRIDE:
+                            ftpRemoteExists = FtpRemoteExists.Overwrite;
+                            break;
+                        default:
+                            throw new Exception($"Unkown distribute mode {settings.Mode}");
+                    }
+
+                    var ftpStatus = ftpClient.UploadFile(reportPath, targetFtpFile, ftpRemoteExists);
+                    if (ftpStatus.IsSuccess())
+                        fileResults.Add(new FTPResult() { Success = true, ReportName = reportName, Message = "FTP upload successful.", FtpPath = targetFtpFile });
+                    else
+                        throw new Exception($"The FTP File '{targetFtpFile}' upload failed.");
+                }
+
+                return fileResults;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex, "The ftp distibute process failed.");
+                fileResults.Add(new FTPResult() { Success = false, Message = ex.Message, ReportName = reportName });
+                return fileResults;
+            }
+        }
+
         public List<FileResult> CopyFile(FileSettings settings, Report report, Q2g.HelperQlik.Connection fileConnection)
         {
             var fileResults = new List<FileResult>();
@@ -138,7 +220,7 @@
                 var target = settings?.Target?.Trim() ?? null;
                 if (target == null)
                 {
-                    var message = $"No target file path for report {reportName} found.";
+                    var message = $"No target file path for report '{reportName}' found.";
                     logger.Error(message);
                     fileResults.Add(new FileResult() { Success = false, Message = message, ReportName = reportName });
                     return fileResults;
@@ -152,7 +234,7 @@
                     return fileResults;
                 }
 
-                string targetPath = String.Empty;
+                var targetPath = String.Empty;
                 if (pathMapper.ContainsKey(target))
                     targetPath = pathMapper[target];
                 else
@@ -174,7 +256,7 @@
                     var targetFile = Path.Combine(targetPath, $"{NormalizeReportName(reportName)}{Path.GetExtension(reportPath)}");
                     if (fileCount > 0)
                         targetFile = Path.Combine(targetPath, $"{NormalizeReportName(reportName)}_{fileCount}{Path.GetExtension(reportPath)}");
-                    logger.Debug($"copy mode {settings.Mode}");
+                    logger.Debug($"copy distibute mode {settings.Mode}");
                     switch (settings.Mode)
                     {
                         case DistributeMode.OVERRIDE:
@@ -189,7 +271,7 @@
                             break;
                         case DistributeMode.CREATEONLY:
                             if (File.Exists(targetFile))
-                                throw new Exception($"The file {targetFile} does not exist.");
+                                throw new Exception($"The file '{targetFile}' does not exist.");
                             File.WriteAllBytes(targetFile, fileData.DownloadData);
                             break;
                         default:
@@ -202,7 +284,7 @@
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "The copying process could not be execute.");
+                logger.Error(ex, "The copying distibute process failed.");
                 fileResults.Add(new FileResult() { Success = false, Message = ex.Message, ReportName = reportName });
                 return fileResults;
             }
@@ -455,7 +537,11 @@
                 foreach (var report in mailList)
                 {
                     mailResult = new MailResult();
-                    mailMessage = new MailMessage();
+                    mailMessage = new MailMessage
+                    {
+                        BodyEncoding = Encoding.UTF8,
+                        SubjectEncoding = Encoding.UTF8
+                    };
                     mailResult.ReportName = report.ReportNames;
                     mailResult.To = report.Settings.To.Replace(";", ",").TrimEnd(',');
                     var toAddresses = report.Settings.To?.Split(';', StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
@@ -514,7 +600,7 @@
                     logger.Debug($"Set SSL '{report.ServerSettings.UseSsl}'");
                     client.EnableSsl = report.ServerSettings.UseSsl;
 
-                    if(report.ServerSettings.UseCertificate)
+                    if (report.ServerSettings.UseCertificate)
                     {
                         logger.Info($"Search for email certificates with name 'mailcert.*'...");
                         var certFiles = Directory.GetFiles(Path.GetDirectoryName(options.PrivateKeyPath), "mailcert.*", SearchOption.TopDirectoryOnly);
@@ -565,6 +651,18 @@
                 mailResult.Message = ex.Message;
                 mailResults.Add(mailResult);
                 return mailResults;
+            }
+        }
+
+        public void CleanUp()
+        {
+            try
+            {
+                pathMapper.Clear();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("The cleanup in distibute failed.", ex);
             }
         }
         #endregion

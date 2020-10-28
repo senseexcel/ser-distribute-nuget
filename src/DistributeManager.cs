@@ -40,6 +40,8 @@
                             return new T() { Type = SettingsType.HUB, Active = active };
                         case "file":
                             return new T() { Type = SettingsType.FILE, Active = active };
+                        case "ftp":
+                            return new T() { Type = SettingsType.FTP, Active = active };
                     }
                 }
 
@@ -93,7 +95,7 @@
 
         public string Run(List<JobResult> jobResults, DistibuteOptions options)
         {
-            var results = new DistributeResults();
+            var results = new List<BaseResult>();
             var connectionManager = new ConnectionManager();
 
             try
@@ -141,7 +143,14 @@
                                         var fileConnection = connectionManager.GetConnection(fileConfigs);
                                         if (fileConnection == null)
                                             throw new Exception("Could not create a connection to Qlik. (FILE)");
-                                        results.FileResults.AddRange(execute.CopyFile(fileSettings, report, fileConnection));
+                                        results.AddRange(execute.CopyFile(fileSettings, report, fileConnection));
+                                        break;
+                                    case SettingsType.FTP:
+                                        //Upload to FTP or FTPS
+                                        logger.Info("Check - Upload to FTP...");
+                                        var ftpSettings = GetSettings<FTPSettings>(location);
+                                        ftpSettings.Type = SettingsType.FTP;
+                                        results.AddRange(execute.FtpUpload(ftpSettings, report));
                                         break;
                                     case SettingsType.HUB:
                                         //Upload to hub
@@ -155,7 +164,7 @@
                                             throw new Exception("Could not create a connection to Qlik. (HUB)");
                                         if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
                                             execute.DeleteReportsFromHub(hubSettings, report, hubConnection, options.SessionUser);
-                                        results.HubResults.AddRange(execute.UploadToHub(hubSettings, report, hubConnection, options.SessionUser));
+                                        results.AddRange(execute.UploadToHub(hubSettings, report, hubConnection, options.SessionUser));
                                         break;
                                     case SettingsType.MAIL:
                                         //Cache mail infos
@@ -177,11 +186,13 @@
                     if (mailList.Count > 0)
                     {
                         logger.Info("Check - Send Mails...");
-                        results.MailResults.AddRange(execute.SendMails(mailList, options));
+                        results.AddRange(execute.SendMails(mailList, options));
                     }
                 }
 
+                execute.CleanUp();
                 connectionManager.MakeFree();
+                results = results.OrderBy(r => r.GetType().Name).ToList();
                 return JsonConvert.SerializeObject(results, Formatting.Indented);
             }
             catch (OperationCanceledException ex)

@@ -5,6 +5,7 @@
     using Newtonsoft.Json.Serialization;
     using Newtonsoft.Json;
     using Ser.Api;
+    using System.Net;
     #endregion
 
     #region Enumerations
@@ -47,7 +48,12 @@
         /// <summary>
         ///  Distribute type hub
         /// </summary>
-        HUB
+        HUB,
+
+        /// <summary>
+        /// Distibute type ftp and ftps
+        /// </summary>
+        FTP
     }
 
     /// <summary>
@@ -127,11 +133,6 @@
         public DistributeMode Mode { get; set; }
 
         /// <summary>
-        /// The user to be the owner.
-        /// </summary>
-        public string Owner { get; set; }
-
-        /// <summary>
         /// All connections that can be used.
         /// </summary>
         [JsonProperty(nameof(Connections)), JsonConverter(typeof(SingleValueArrayConverter))]
@@ -142,20 +143,48 @@
     /// <summary>
     /// The settings for file distribute
     /// </summary>
-    public class FileSettings : DeliverySettings
+    public class FileSettings : DeliverySettings {}
+
+    /// <summary>
+    /// The general settings for web connections
+    /// </summary>
+    public class WebDeliverySettings : DeliverySettings
     {
-        // properties for the future
-        #region Variables & Properties
         /// <summary>
-        /// Group rights
+        /// Server name
         /// </summary>
-        public string Group;
+        public string Host { get; set; }
 
         /// <summary>
-        /// Access control list rights
+        /// User name
         /// </summary>
-        public string ACL;
-        #endregion
+        public string UserName { get; set; }
+
+        /// <summary>
+        /// User password in plain text or signed
+        /// </summary>
+        public string Password { get; set; }
+
+        /// <summary>
+        /// The port on the server
+        /// </summary>
+        public int Port { get; set; } = 21;
+    }
+
+    /// <summary>
+    /// The settings for FTP or FTP-SSL distibute
+    /// </summary>
+    public class FTPSettings : WebDeliverySettings
+    {
+        /// <summary>
+        /// Implicit oder Explicit
+        /// </summary>
+        public string EncryptionMode { get; set; }
+
+        /// <summary>
+        /// Use a SSL Certificate
+        /// </summary>
+        public bool UseSsl { get; set; }
     }
 
     /// <summary>
@@ -167,6 +196,11 @@
         /// The content type of the report.
         /// </summary>
         public string SharedContentType { get; set; } = "Qlik report";
+
+        /// <summary>
+        /// The user to be the owner.
+        /// </summary>
+        public string Owner { get; set; }
     }
 
     /// <summary>
@@ -251,7 +285,7 @@
         /// <summary>
         /// The port of the mail server
         /// </summary>
-        public int Port { get; set; }
+        public int Port { get; set; } = 25;
 
         /// <summary>
         /// The username of the mail account (optional).

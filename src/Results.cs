@@ -8,12 +8,17 @@
 
     [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,
                 NamingStrategyType = typeof(CamelCaseNamingStrategy))]
-    public class BaseResult
+    public abstract class BaseResult
     {
         [JsonProperty(Required = Required.Always)]
+        public abstract string DistributionMode { get; set; }
+
+        [JsonProperty(Required = Required.Always)]
         public bool Success { get; set; }
+
         [JsonProperty(Required = Required.Always)]
         public string Message { get; set; }
+
         [JsonProperty(Required = Required.Always)]
         public string ReportName { get; set; }
     }
@@ -22,30 +27,37 @@
                  NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class HubResult : BaseResult
     {
+        public override string DistributionMode { get; set; } = "Hub";
+
         public string Link { get; set; }
+        
     }
 
     [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,
                 NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class FileResult : BaseResult
     {
+        public override string DistributionMode { get; set; } = "File System";
+
         public string CopyPath { get; set; }
+    }
+
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,
+                NamingStrategyType = typeof(CamelCaseNamingStrategy))]
+    public class FTPResult : BaseResult
+    {
+        public override string DistributionMode { get; set; } = "FTP";
+
+        public string FtpPath { get; set; }
     }
 
     [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,
                 NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class MailResult : BaseResult
     {
+        public override string DistributionMode { get; set; } = "Mail";
+
         public string To { get; set; }
         public string Subject { get; set; }
-    }
-
-    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,
-                NamingStrategyType = typeof(CamelCaseNamingStrategy))]
-    public class DistributeResults
-    {
-        public List<HubResult> HubResults { get; set; } = new List<HubResult>();
-        public List<FileResult> FileResults { get; set; } = new List<FileResult>();
-        public List<MailResult> MailResults { get; set; } = new List<MailResult>();
     }
 }
