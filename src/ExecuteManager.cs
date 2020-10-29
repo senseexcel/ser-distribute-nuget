@@ -191,11 +191,18 @@
                             throw new Exception($"Unkown distribute mode {settings.Mode}");
                     }
 
+                    // Create FTP Folder
+                    var folderObject = ftpClient.GetObjectInfo(targetPath);
+                    if (folderObject == null)
+                        ftpClient.CreateDirectory(targetPath, true);
+
+                    // Upload File
                     var ftpStatus = ftpClient.UploadFile(reportPath, targetFtpFile, ftpRemoteExists);
                     if (ftpStatus.IsSuccess())
                         fileResults.Add(new FTPResult() { Success = true, ReportName = reportName, Message = "FTP upload successful.", FtpPath = targetFtpFile });
                     else
                         throw new Exception($"The FTP File '{targetFtpFile}' upload failed.");
+
                 }
 
                 return fileResults;
