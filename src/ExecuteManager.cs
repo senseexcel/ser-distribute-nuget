@@ -259,10 +259,11 @@
                 {
                     if (report.Paths.Count > 1)
                         fileCount++;
-                    var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
+                    
                     var targetFile = Path.Combine(targetPath, $"{NormalizeReportName(reportName)}{Path.GetExtension(reportPath)}");
-                    if (fileCount > 1)
-                        targetFile = Path.Combine(targetPath, $"{NormalizeReportName(reportName)}_{fileCount}{Path.GetExtension(reportPath)}");
+                    if (File.Exists(targetFile))
+                        targetFile = Path.Combine(targetPath, $"{NormalizeReportName(reportName)}({fileCount}){Path.GetExtension(reportPath)}");
+                    var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
                     logger.Debug($"copy distibute mode {settings.Mode}");
                     switch (settings.Mode)
                     {
