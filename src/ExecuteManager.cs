@@ -261,7 +261,7 @@
                         fileCount++;
                     var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
                     var targetFile = Path.Combine(targetPath, $"{NormalizeReportName(reportName)}{Path.GetExtension(reportPath)}");
-                    if (fileCount > 0)
+                    if (fileCount > 1)
                         targetFile = Path.Combine(targetPath, $"{NormalizeReportName(reportName)}_{fileCount}{Path.GetExtension(reportPath)}");
                     logger.Debug($"copy distibute mode {settings.Mode}");
                     switch (settings.Mode)
