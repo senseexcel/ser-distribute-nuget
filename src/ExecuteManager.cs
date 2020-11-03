@@ -257,12 +257,13 @@
                 var fileCount = 0;
                 foreach (var reportPath in report.Paths)
                 {
-                    if (report.Paths.Count > 1)
-                        fileCount++;
-
                     var targetFile = Path.Combine(targetPath, $"{NormalizeReportName(reportName)}{Path.GetExtension(reportPath)}");
-                    if (fileCount > 0)
+                    if (report.Paths.Count > 1)
+                    {
+                        fileCount++;
                         targetFile = Path.Combine(targetPath, $"{NormalizeReportName(reportName)}_{fileCount}{Path.GetExtension(reportPath)}");
+                    }
+                   
                     var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
                     logger.Debug($"copy distibute mode {settings.Mode}");
                     switch (settings.Mode)
