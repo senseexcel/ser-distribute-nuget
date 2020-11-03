@@ -235,7 +235,7 @@
 
                 if (!target.ToLowerInvariant().StartsWith("lib://"))
                 {
-                    var message = $"Target value \"{target}\" is not a lib:// folder.";
+                    var message = $"Target value '{target}' is not a 'lib://' connection.";
                     logger.Error(message);
                     fileResults.Add(new FileResult() { Success = false, Message = message, ReportName = reportName });
                     return fileResults;
