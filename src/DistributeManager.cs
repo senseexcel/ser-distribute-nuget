@@ -192,6 +192,10 @@
 
                 execute.CleanUp();
                 connectionManager.MakeFree();
+
+                //Check Cancel
+                options.CancelToken?.ThrowIfCancellationRequested();
+
                 results = results.OrderBy(r => r.GetType().Name).ToList();
                 return JsonConvert.SerializeObject(results, Formatting.Indented);
             }
