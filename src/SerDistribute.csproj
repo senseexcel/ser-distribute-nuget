@@ -30,6 +30,12 @@
         <Reference Include="Q2g.HelperQlik">
           <HintPath>..\..\q2g-helper-qlik\src\bin\Release\$(TargetFramework)\Q2gHelperQlik.dll</HintPath>
         </Reference>
+        <Reference Include="enigma.net">
+          <HintPath>..\..\..\QlikAPIs\enigma.net\src\bin\Release\$(TargetFramework)\enigma.net.dll</HintPath>
+        </Reference>
+        <Reference Include="qlik-engineapi">
+          <HintPath>..\..\..\QlikAPIs\qlik-engineapi\src\qlik-engineapi\bin\Release\$(TargetFramework)\qlik-engineapi.dll</HintPath>
+        </Reference>
       </ItemGroup>
     </When>
     <Otherwise>
@@ -46,6 +52,12 @@
         <Reference Include="Q2g.HelperQlik">
           <HintPath>..\..\q2g-helper-qlik\src\bin\Debug\$(TargetFramework)\Q2gHelperQlik.dll</HintPath>
         </Reference>
+        <Reference Include="enigma.net">
+          <HintPath>..\..\..\QlikAPIs\enigma.net\src\bin\Debug\$(TargetFramework)\enigma.net.dll</HintPath>
+        </Reference>
+        <Reference Include="qlik-engineapi">
+          <HintPath>..\..\..\QlikAPIs\qlik-engineapi\src\qlik-engineapi\bin\Debug\$(TargetFramework)\qlik-engineapi.dll</HintPath>
+        </Reference>
       </ItemGroup>
     </Otherwise>
   </Choose>
@@ -57,15 +69,6 @@
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="NLog" Version="4.7.5" />
     <PackageReference Include="GitVersionTask" Version="5.5.1" PrivateAssets="All" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="enigma.net">
-      <HintPath>..\..\..\QlikAPIs\enigma.net\src\bin\Release\netcoreapp3.1\enigma.net.dll</HintPath>
-    </Reference>
-    <Reference Include="qlik-engineapi">
-      <HintPath>..\..\..\QlikAPIs\qlik-engineapi\src\qlik-engineapi\bin\Release\netcoreapp3.1\qlik-engineapi.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
   <Target Name="GitVersion" BeforeTargets="AfterBuild">
