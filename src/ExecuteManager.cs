@@ -49,21 +49,20 @@
         {
             try
             {
-                var result = HelperUtilities.NormalizeUri(path);
-                var libUri = result.Item1;
-
+                var normalizePath = HelperUtilities.NormalizeUri(path);
+             
                 var connections = fileConnection?.CurrentApp?.GetConnectionsAsync().Result ?? null;
                 if (connections != null)
                 {
-                    var libResult = connections.FirstOrDefault(n => n.qName.ToLowerInvariant() == result.Item2.ToLowerInvariant()) ?? null;
+                    var libResult = connections.FirstOrDefault(n => n.qName.ToLowerInvariant() == normalizePath.ToLowerInvariant()) ?? null;
                     if (libResult == null)
                     {
-                        logger.Error($"No data connection with name {result.Item2} found.");
+                        logger.Error($"No data connection with name {normalizePath} found.");
                         return null;
                     }
 
                     var libPath = libResult.qConnectionString.ToString();
-                    var resultPath = Path.Combine(libPath, libUri.LocalPath.Replace("/", "\\").Trim().Trim('\\'));
+                    var resultPath = Path.Combine(libPath, normalizePath.Replace("/", "\\").Trim().Trim('\\'));
                     return resultPath;
                 }
                 else
