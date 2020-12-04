@@ -47,33 +47,21 @@
         #region Private Methods
         private string NormalizeLibPath(string path, Connection fileConnection)
         {
-            try
-            {
-                var normalizePath = HelperUtilities.NormalizeUri(path);
-             
-                var connections = fileConnection?.CurrentApp?.GetConnectionsAsync().Result ?? null;
-                if (connections != null)
-                {
-                    var libResult = connections.FirstOrDefault(n => n.qName.ToLowerInvariant() == normalizePath.ToLowerInvariant()) ?? null;
-                    if (libResult == null)
-                    {
-                        logger.Error($"No data connection with name {normalizePath} found.");
-                        return null;
-                    }
-
-                    var libPath = libResult.qConnectionString.ToString();
-                    var resultPath = Path.Combine(libPath, normalizePath.Replace("/", "\\").Trim().Trim('\\'));
-                    return resultPath;
-                }
-                else
-                    logger.Error("No data connections found.");
-                return null;
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex, "The lib path could not resolve.");
-                return null;
-            }
+            logger.Debug($"Resolve data connection from path '{path}'...");
+            var pathSegments = path.Split('/');
+            var connectionName = pathSegments?.ElementAtOrDefault(2) ?? null;
+            var connections = fileConnection?.CurrentApp?.GetConnectionsAsync().Result ?? null;
+            if (connections == null)
+                throw new Exception("No data connections receive from qlik.");
+            
+            var libResult = connections.FirstOrDefault(n => n.qName == connectionName);
+            if (libResult == null)
+                throw new Exception($"No data connection with name '{connectionName}' found.");
+            
+            var libPath = libResult.qConnectionString.ToString();
+            var result = Path.Combine(libPath, String.Join('/', pathSegments, 3, pathSegments.Length - 3));
+            logger.Debug($"The resolved path is '{result}'.");
+            return result;
         }
 
         private HubInfo GetSharedContentFromUser(QlikQrsHub hub, string name, DomainUser hubUser)
@@ -198,7 +186,7 @@
                     // Upload File
                     var ftpStatus = ftpClient.UploadFile(reportPath, targetFtpFile, ftpRemoteExists);
                     if (ftpStatus.IsSuccess())
-                        fileResults.Add(new FTPResult() { Success = true, ReportName = reportName, Message = "FTP upload successful.", FtpPath = targetFtpFile });
+                        fileResults.Add(new FTPResult() { Success = true, ReportName = reportName, Message = "FTP upload was executed successfully.", FtpPath = targetFtpFile });
                     else
                         throw new Exception($"The FTP File '{targetFtpFile}' upload failed.");
 
@@ -208,7 +196,7 @@
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "The ftp distibute process failed.");
+                logger.Error(ex, "The delivery process for 'ftp' failed.");
                 fileResults.Add(new FTPResult() { Success = false, Message = ex.Message, ReportName = reportName });
                 return fileResults;
             }
@@ -232,6 +220,7 @@
                     return fileResults;
                 }
 
+                target = target.Replace("\\", "/");
                 if (!target.ToLowerInvariant().StartsWith("lib://"))
                 {
                     var message = $"Target value '{target}' is not a 'lib://' connection.";
@@ -246,12 +235,10 @@
                 else
                 {
                     targetPath = NormalizeLibPath(target, fileConnection);
-                    if (targetPath == null)
-                        throw new Exception("The lib path could not be resolved.");
                     pathMapper.Add(target, targetPath);
                 }
 
-                logger.Info($"Resolve target path: \"{targetPath}\".");
+                logger.Info($"Use the following resolved path '{targetPath}'...");
 
                 var fileCount = 0;
                 foreach (var reportPath in report.Paths)
@@ -262,9 +249,9 @@
                         fileCount++;
                         targetFile = Path.Combine(targetPath, $"{NormalizeReportName(reportName)}_{fileCount}{Path.GetExtension(reportPath)}");
                     }
-                   
+
                     var fileData = report.Data.FirstOrDefault(f => f.Filename == Path.GetFileName(reportPath));
-                    logger.Debug($"copy distibute mode {settings.Mode}");
+                    logger.Info($"Copy with distibute mode '{settings.Mode}'...");
                     switch (settings.Mode)
                     {
                         case DistributeMode.OVERRIDE:
@@ -285,14 +272,14 @@
                         default:
                             throw new Exception($"Unkown distribute mode {settings.Mode}");
                     }
-                    logger.Info($"file {targetFile} was copied - Mode {settings.Mode}");
-                    fileResults.Add(new FileResult() { Success = true, ReportName = reportName, Message = "File copy successful.", CopyPath = targetFile });
+                    logger.Info($"The file '{targetFile}' was copied...");
+                    fileResults.Add(new FileResult() { Success = true, ReportName = reportName, Message = "Report was successful created.", CopyPath = targetFile });
                 }
                 return fileResults;
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "The copying distibute process failed.");
+                logger.Error(ex, "The delivery process for 'files' failed.");
                 fileResults.Add(new FileResult() { Success = false, Message = ex.Message, ReportName = reportName });
                 return fileResults;
             }
@@ -483,7 +470,7 @@
                         var link = hubInfo?.References?.FirstOrDefault(r => r.LogicalPath.Contains($"/{filename}"))?.ExternalPath ?? null;
                         if (link == null)
                             throw new Exception($"The download link is empty. Please check the security rules. (Name: {filename} - References: {hubInfo?.References?.Count}) - User: {hubUser}.");
-                        results.Add(new HubResult() { Message = $"Upload {contentName} successful.", Success = true, Link = link });
+                        results.Add(new HubResult() { Message = "Upload to the hub was successful.", Success = true, Link = link });
                     }
                     else
                     {
@@ -492,7 +479,7 @@
                 }
                 catch (Exception ex)
                 {
-                    logger.Error(ex, "The process could not be upload to the hub.");
+                    logger.Error(ex, "The delivery process for 'hub' failed.");
                     results.Add(new HubResult() { Message = ex.Message, Success = false });
                 }
                 finally
@@ -631,7 +618,7 @@
                         Task.Delay(delay).ContinueWith(r =>
                         {
                             client.Send(mailMessage);
-                            mailResult.Message = "send mail successful.";
+                            mailResult.Message = "Sending the mail(s) was successful.";
                             mailResult.Success = true;
                         }).Wait();
                     }
@@ -650,7 +637,7 @@
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "The reports could not be sent as mail.");
+                logger.Error(ex, "The delivery process for 'mail' failed.");
                 if (mailMessage != null)
                     mailMessage.Dispose();
                 if (client != null)
