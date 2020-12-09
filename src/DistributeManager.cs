@@ -107,11 +107,14 @@
                     //Check Cancel
                     options.CancelToken?.ThrowIfCancellationRequested();
 
-                    if (jobResult.Status != TaskStatusInfo.SUCCESS)
+                    if (jobResult.Status != TaskStatusInfo.SUCCESS && jobResult.Status != TaskStatusInfo.WARNING)
                     {
-                        logger.Warn($"The result \"{jobResult.Status }\" of the report is not correct. The report is ignored.");
+                        logger.Info($"The report status '{jobResult.Status}' is ignored because it was not successful...");
                         continue;
                     }
+
+                    if(jobResult.Status == TaskStatusInfo.WARNING)
+                        logger.Info("The report status includes a warning, but it is delivered...");
 
                     var mailList = new List<MailSettings>();
                     var uploadTasks = new List<Task<HubResult>>();
