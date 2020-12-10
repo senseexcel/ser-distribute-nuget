@@ -144,7 +144,6 @@
 
                     var mailList = new List<MailSettings>();
                     var uploadTasks = new List<Task<HubResult>>();
-                    var resultStatus = jobResult.Status.ToString().ToUpperInvariant();
                     foreach (var report in jobResult.Reports)
                     {
                         //Check Cancel
@@ -173,14 +172,14 @@
                                         var fileConnection = connectionManager.GetConnection(fileConfigs);
                                         if (fileConnection == null)
                                             throw new Exception("Could not create a connection to Qlik. (FILE)");
-                                        results.AddRange(execute.CopyFile(fileSettings, report, fileConnection, resultStatus));
+                                        results.AddRange(execute.CopyFile(fileSettings, report, fileConnection, jobResult));
                                         break;
                                     case SettingsType.FTP:
                                         //Upload to FTP or FTPS
                                         logger.Info("Check - Upload to FTP...");
                                         var ftpSettings = GetSettings<FTPSettings>(location);
                                         ftpSettings.Type = SettingsType.FTP;
-                                        results.AddRange(execute.FtpUpload(ftpSettings, report, resultStatus));
+                                        results.AddRange(execute.FtpUpload(ftpSettings, report, jobResult));
                                         break;
                                     case SettingsType.HUB:
                                         //Upload to hub
@@ -194,7 +193,7 @@
                                             throw new Exception("Could not create a connection to Qlik. (HUB)");
                                         if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
                                             execute.DeleteReportsFromHub(hubSettings, report, hubConnection, options.SessionUser);
-                                        results.AddRange(execute.UploadToHub(hubSettings, report, hubConnection, options.SessionUser, resultStatus));
+                                        results.AddRange(execute.UploadToHub(hubSettings, report, hubConnection, options.SessionUser, jobResult));
                                         break;
                                     case SettingsType.MAIL:
                                         //Cache mail infos
@@ -216,7 +215,7 @@
                     if (mailList.Count > 0)
                     {
                         logger.Info("Check - Send Mails...");
-                        results.AddRange(execute.SendMails(mailList, options, resultStatus));
+                        results.AddRange(execute.SendMails(mailList, options, jobResult));
                     }
                 }
 
