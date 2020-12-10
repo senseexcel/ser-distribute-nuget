@@ -109,19 +109,19 @@
 
                     if (jobResult.Status == TaskStatusInfo.ERROR || jobResult.Status == TaskStatusInfo.RETRYERROR)
                     {
-                        results.Add(new ErrorResult() { Success = false, ReportResult = "ERROR", 
+                        results.Add(new ErrorResult() { Success = false, ReportState = "ERROR", 
                                                         Message = jobResult?.Exception?.FullMessage ?? "Unknown error" });
                         continue;
                     }
                     else if (jobResult.Status == TaskStatusInfo.INACTIVE)
                     {
-                        results.Add(new ErrorResult() { Success = true, ReportResult = "INACTIVE", 
+                        results.Add(new ErrorResult() { Success = true, ReportState = "INACTIVE", 
                                                         Message = jobResult?.Exception?.FullMessage ?? "inactive task" });
                         continue;
                     }
                     else if(jobResult.Status == TaskStatusInfo.ABORT)
                     {
-                        results.Add(new ErrorResult() { Success = true, ReportResult = "ABORT", 
+                        results.Add(new ErrorResult() { Success = true, ReportState = "ABORT", 
                                                         Message = jobResult?.Exception?.FullMessage ?? "Task was canceled"});
                         continue;
                     }
@@ -137,13 +137,14 @@
                     {
                         logger.Error($"The report has a unknown status '{jobResult.Status}'...");
                         results.Add(new ErrorResult() { Success = false, 
-                                                        ReportResult = jobResult.Status.ToString().ToUpperInvariant(),
+                                                        ReportState = jobResult.Status.ToString().ToUpperInvariant(),
                                                         Message = jobResult?.Exception?.FullMessage ?? "Unknown task status" });
                         continue;
                     }
 
                     var mailList = new List<MailSettings>();
                     var uploadTasks = new List<Task<HubResult>>();
+                    var resultStatus = jobResult.Status.ToString().ToUpperInvariant();
                     foreach (var report in jobResult.Reports)
                     {
                         //Check Cancel
@@ -172,14 +173,14 @@
                                         var fileConnection = connectionManager.GetConnection(fileConfigs);
                                         if (fileConnection == null)
                                             throw new Exception("Could not create a connection to Qlik. (FILE)");
-                                        results.AddRange(execute.CopyFile(fileSettings, report, fileConnection));
+                                        results.AddRange(execute.CopyFile(fileSettings, report, fileConnection, resultStatus));
                                         break;
                                     case SettingsType.FTP:
                                         //Upload to FTP or FTPS
                                         logger.Info("Check - Upload to FTP...");
                                         var ftpSettings = GetSettings<FTPSettings>(location);
                                         ftpSettings.Type = SettingsType.FTP;
-                                        results.AddRange(execute.FtpUpload(ftpSettings, report));
+                                        results.AddRange(execute.FtpUpload(ftpSettings, report, resultStatus));
                                         break;
                                     case SettingsType.HUB:
                                         //Upload to hub
@@ -193,7 +194,7 @@
                                             throw new Exception("Could not create a connection to Qlik. (HUB)");
                                         if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
                                             execute.DeleteReportsFromHub(hubSettings, report, hubConnection, options.SessionUser);
-                                        results.AddRange(execute.UploadToHub(hubSettings, report, hubConnection, options.SessionUser));
+                                        results.AddRange(execute.UploadToHub(hubSettings, report, hubConnection, options.SessionUser, resultStatus));
                                         break;
                                     case SettingsType.MAIL:
                                         //Cache mail infos
@@ -215,7 +216,7 @@
                     if (mailList.Count > 0)
                     {
                         logger.Info("Check - Send Mails...");
-                        results.AddRange(execute.SendMails(mailList, options));
+                        results.AddRange(execute.SendMails(mailList, options, resultStatus));
                     }
                 }
 

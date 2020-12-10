@@ -23,7 +23,7 @@
         public string ReportName { get; set; }
 
         [JsonProperty(Required = Required.Always)]
-        public string ReportResult { get; set; }
+        public string ReportState { get; set; }
     }
 
     [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,

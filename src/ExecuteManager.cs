@@ -53,11 +53,11 @@
             var connections = fileConnection?.CurrentApp?.GetConnectionsAsync().Result ?? null;
             if (connections == null)
                 throw new Exception("No data connections receive from qlik.");
-            
+
             var libResult = connections.FirstOrDefault(n => n.qName == connectionName);
             if (libResult == null)
                 throw new Exception($"No data connection with name '{connectionName}' found.");
-            
+
             var libPath = libResult.qConnectionString.ToString();
             var result = Path.Combine(libPath, String.Join('/', pathSegments, 3, pathSegments.Length - 3));
             logger.Debug($"The resolved path is '{result}'.");
@@ -114,7 +114,7 @@
         #endregion
 
         #region Public Methods
-        public List<FTPResult> FtpUpload(FTPSettings settings, Report report)
+        public List<FTPResult> FtpUpload(FTPSettings settings, Report report, string state)
         {
             var fileResults = new List<FTPResult>();
             var reportName = report?.Name ?? null;
@@ -128,7 +128,7 @@
                 {
                     var message = $"No target ftp path for report '{reportName}' found.";
                     logger.Error(message);
-                    fileResults.Add(new FTPResult() { Success = false, Message = message, ReportName = reportName });
+                    fileResults.Add(new FTPResult() { Success = false, ReportState = "ERROR", Message = message, ReportName = reportName });
                     return fileResults;
                 }
 
@@ -186,10 +186,9 @@
                     // Upload File
                     var ftpStatus = ftpClient.UploadFile(reportPath, targetFtpFile, ftpRemoteExists);
                     if (ftpStatus.IsSuccess())
-                        fileResults.Add(new FTPResult() { Success = true, ReportName = reportName, Message = "FTP upload was executed successfully.", FtpPath = targetFtpFile });
+                        fileResults.Add(new FTPResult() { Success = true, ReportState = state, ReportName = reportName, Message = "FTP upload was executed successfully.", FtpPath = targetFtpFile });
                     else
                         throw new Exception($"The FTP File '{targetFtpFile}' upload failed.");
-
                 }
 
                 return fileResults;
@@ -197,12 +196,12 @@
             catch (Exception ex)
             {
                 logger.Error(ex, "The delivery process for 'ftp' failed.");
-                fileResults.Add(new FTPResult() { Success = false, Message = ex.Message, ReportName = reportName });
+                fileResults.Add(new FTPResult() { Success = false, ReportState = "ERROR", Message = ex.Message, ReportName = reportName });
                 return fileResults;
             }
         }
 
-        public List<FileResult> CopyFile(FileSettings settings, Report report, Q2g.HelperQlik.Connection fileConnection)
+        public List<FileResult> CopyFile(FileSettings settings, Report report, Connection fileConnection, string state)
         {
             var fileResults = new List<FileResult>();
             var reportName = report?.Name ?? null;
@@ -216,7 +215,7 @@
                 {
                     var message = $"No target file path for report '{reportName}' found.";
                     logger.Error(message);
-                    fileResults.Add(new FileResult() { Success = false, Message = message, ReportName = reportName });
+                    fileResults.Add(new FileResult() { Success = false, ReportState = "ERROR", Message = message, ReportName = reportName });
                     return fileResults;
                 }
 
@@ -225,7 +224,7 @@
                 {
                     var message = $"Target value '{target}' is not a 'lib://' connection.";
                     logger.Error(message);
-                    fileResults.Add(new FileResult() { Success = false, Message = message, ReportName = reportName });
+                    fileResults.Add(new FileResult() { Success = false, ReportState = "ERROR", Message = message, ReportName = reportName });
                     return fileResults;
                 }
 
@@ -273,14 +272,14 @@
                             throw new Exception($"Unkown distribute mode {settings.Mode}");
                     }
                     logger.Info($"The file '{targetFile}' was copied...");
-                    fileResults.Add(new FileResult() { Success = true, ReportName = reportName, Message = "Report was successful created.", CopyPath = targetFile });
+                    fileResults.Add(new FileResult() { Success = true, ReportState = state, ReportName = reportName, Message = "Report was successful created.", CopyPath = targetFile });
                 }
                 return fileResults;
             }
             catch (Exception ex)
             {
                 logger.Error(ex, "The delivery process for 'files' failed.");
-                fileResults.Add(new FileResult() { Success = false, Message = ex.Message, ReportName = reportName });
+                fileResults.Add(new FileResult() { Success = false, ReportState = "ERROR", Message = ex.Message, ReportName = reportName });
                 return fileResults;
             }
             finally
@@ -326,7 +325,7 @@
             }
         }
 
-        public List<HubResult> UploadToHub(HubSettings settings, Report report, Connection hubConnection, DomainUser sessionUser)
+        public List<HubResult> UploadToHub(HubSettings settings, Report report, Connection hubConnection, DomainUser sessionUser, string state)
         {
             var reportName = report?.Name ?? null;
 
@@ -469,7 +468,7 @@
                         var link = hubInfo?.References?.FirstOrDefault(r => r.LogicalPath.Contains($"/{filename}"))?.ExternalPath ?? null;
                         if (link == null)
                             throw new Exception($"The download link is empty. Please check the security rules. (Name: {filename} - References: {hubInfo?.References?.Count}) - User: {hubUser}.");
-                        results.Add(new HubResult() { Message = "Upload to the hub was successful.", Success = true, Link = link });
+                        results.Add(new HubResult() { Success = true, ReportState = state, Message = "Upload to the hub was successful.", Link = link });
                     }
                     else
                     {
@@ -479,7 +478,7 @@
                 catch (Exception ex)
                 {
                     logger.Error(ex, "The delivery process for 'hub' failed.");
-                    results.Add(new HubResult() { Message = ex.Message, Success = false });
+                    results.Add(new HubResult() { Success = false, ReportState = "ERROR", Message = ex.Message });
                 }
                 finally
                 {
@@ -489,7 +488,7 @@
             return results;
         }
 
-        public List<MailResult> SendMails(List<MailSettings> settingsList, DistibuteOptions options)
+        public List<MailResult> SendMails(List<MailSettings> settingsList, DistibuteOptions options, string state)
         {
             SmtpClient client = null;
             var mailMessage = new MailMessage();
@@ -619,6 +618,7 @@
                             client.Send(mailMessage);
                             mailResult.Message = "Sending the mail(s) was successful.";
                             mailResult.Success = true;
+                            mailResult.ReportState = state;
                         }).Wait();
                     }
                     else
@@ -626,6 +626,7 @@
                         logger.Error("Mail without mail Address could not be sent.");
                         mailResult.Message = "send mail failed.";
                         mailResult.Success = false;
+                        mailResult.ReportState = "ERROR";
                     }
                     mailMessage.Dispose();
                     client.Dispose();
@@ -642,6 +643,7 @@
                 if (client != null)
                     client.Dispose();
                 mailResult.Success = false;
+                mailResult.ReportState = "ERROR";
                 mailResult.Message = ex.Message;
                 mailResults.Add(mailResult);
                 return mailResults;
