@@ -21,6 +21,16 @@
 
         [JsonProperty(Required = Required.Always)]
         public string ReportName { get; set; }
+
+        [JsonProperty(Required = Required.Always)]
+        public string ReportResult { get; set; }
+    }
+
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,
+                NamingStrategyType = typeof(CamelCaseNamingStrategy))]
+    public class ErrorResult : BaseResult
+    {
+        public override string DistributionMode { get; set; } = "Error";
     }
 
     [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,

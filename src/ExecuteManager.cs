@@ -328,7 +328,6 @@
 
         public List<HubResult> UploadToHub(HubSettings settings, Report report, Connection hubConnection, DomainUser sessionUser)
         {
-            var hubResult = new HubResult();
             var reportName = report?.Name ?? null;
 
             if (String.IsNullOrEmpty(reportName))

@@ -107,14 +107,40 @@
                     //Check Cancel
                     options.CancelToken?.ThrowIfCancellationRequested();
 
-                    if (jobResult.Status != TaskStatusInfo.SUCCESS && jobResult.Status != TaskStatusInfo.WARNING)
+                    if (jobResult.Status == TaskStatusInfo.ERROR || jobResult.Status == TaskStatusInfo.RETRYERROR)
                     {
-                        logger.Info($"The report status '{jobResult.Status}' is ignored because it was not successful...");
+                        results.Add(new ErrorResult() { Success = false, ReportResult = "ERROR", 
+                                                        Message = jobResult?.Exception?.FullMessage ?? "Unknown error" });
                         continue;
                     }
-
-                    if(jobResult.Status == TaskStatusInfo.WARNING)
+                    else if (jobResult.Status == TaskStatusInfo.INACTIVE)
+                    {
+                        results.Add(new ErrorResult() { Success = true, ReportResult = "INACTIVE", 
+                                                        Message = jobResult?.Exception?.FullMessage ?? "inactive task" });
+                        continue;
+                    }
+                    else if(jobResult.Status == TaskStatusInfo.ABORT)
+                    {
+                        results.Add(new ErrorResult() { Success = true, ReportResult = "ABORT", 
+                                                        Message = jobResult?.Exception?.FullMessage ?? "Task was canceled"});
+                        continue;
+                    }
+                    else if(jobResult.Status == TaskStatusInfo.WARNING)
+                    {
                         logger.Info("The report status includes a warning, but it is delivered...");
+                    }
+                    else if(jobResult.Status == TaskStatusInfo.SUCCESS)
+                    {
+                        logger.Info($"The report was successfully created and is now being delivered...");
+                    }
+                    else
+                    {
+                        logger.Error($"The report has a unknown status '{jobResult.Status}'...");
+                        results.Add(new ErrorResult() { Success = false, 
+                                                        ReportResult = jobResult.Status.ToString().ToUpperInvariant(),
+                                                        Message = jobResult?.Exception?.FullMessage ?? "Unknown task status" });
+                        continue;
+                    }
 
                     var mailList = new List<MailSettings>();
                     var uploadTasks = new List<Task<HubResult>>();
@@ -163,7 +189,7 @@
                                         var hubConfigs = JsonConvert.DeserializeObject<List<SerConnection>>(JsonConvert.SerializeObject(hubSettings?.Connections ?? new List<SerConnection>()));
                                         connectionManager.LoadConnections(hubConfigs, 1);
                                         var hubConnection = connectionManager.GetConnection(hubConfigs);
-                                        if(hubConnection == null)
+                                        if (hubConnection == null)
                                             throw new Exception("Could not create a connection to Qlik. (HUB)");
                                         if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
                                             execute.DeleteReportsFromHub(hubSettings, report, hubConnection, options.SessionUser);
