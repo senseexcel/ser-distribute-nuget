@@ -28,6 +28,13 @@
 
     [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,
                 NamingStrategyType = typeof(CamelCaseNamingStrategy))]
+    public class DistibutionResult : BaseResult
+    {
+        public override string DistributionMode { get; set; } = "Distibution";
+    }
+
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,
+                NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class ErrorResult : BaseResult
     {
         public override string DistributionMode { get; set; } = "Error";

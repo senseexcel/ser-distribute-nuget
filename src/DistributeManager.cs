@@ -153,6 +153,7 @@
                         var resolver = new CryptoResolver(options.PrivateKeyPath);
                         distribute = resolver.Resolve(distribute);
                         var locations = distribute?.Children().ToList() ?? new List<JToken>();
+                        var distibuteActivationCount = 0;
                         foreach (var location in locations)
                         {
                             //Check Cancel
@@ -161,6 +162,7 @@
                             var settings = GetSettings<BaseDeliverySettings>(location, true);
                             if (settings.Active ?? true)
                             {
+                                distibuteActivationCount++;
                                 switch (settings.Type)
                                 {
                                     case SettingsType.FILE:
@@ -208,6 +210,16 @@
                                         break;
                                 }
                             }
+                        }
+
+                        if(distibuteActivationCount == 0)
+                        {
+                            results.Add(new DistibutionResult() 
+                            {
+                                Success = true,
+                                Message = "No delivery type was selected for the report.", 
+                                ReportState = jobResult.Status.ToString().ToUpperInvariant()
+                            });
                         }
                     }
 
