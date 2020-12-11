@@ -592,14 +592,14 @@
                             var result = mailList.SingleOrDefault(m => m.Settings.ToString() == mailSettings.ToString());
                             if (result == null)
                             {
-                                logger.Debug("Add report to mail");
+                                logger.Debug("Add report to mail...");
                                 var mailReport = new EMailReport(mailSettings, mailSettings.MailServer, mailSettings.ToString());
                                 mailReport.AddReport(fileData, report.Name);
                                 mailList.Add(mailReport);
                             }
                             else
                             {
-                                logger.Debug("Merge report to mail");
+                                logger.Debug("Merge report to mail...");
                                 result.AddReport(fileData, reportNames.ToString()?.Trim()?.TrimEnd(','));
                             }
                         }
@@ -607,7 +607,7 @@
                 }
 
                 //send merged mail infos
-                logger.Debug($"{mailList.Count} Mails to send.");
+                logger.Debug($"{mailList.Count} Mails to send...");
                 foreach (var report in mailList)
                 {
                     mailResult = new MailResult();
@@ -617,11 +617,11 @@
                         SubjectEncoding = Encoding.UTF8
                     };
                     mailResult.ReportName = report.ReportNames;
-                    mailResult.To = report.Settings.To.Replace(";", ",").TrimEnd(',');
+                    mailResult.To = report.Settings?.To?.Replace(";", ",")?.TrimEnd(',') ?? "No mail recipient was specified.";
                     var toAddresses = report.Settings.To?.Split(';', StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
                     var ccAddresses = report.Settings.Cc?.Split(';', StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
                     var bccAddresses = report.Settings.Bcc?.Split(';', StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
-                    mailMessage.Subject = report.Settings?.Subject?.Trim() ?? "NO SUBJECT !!! :(";
+                    mailMessage.Subject = report.Settings?.Subject?.Trim() ?? "No subject was specified.";
                     logger.Debug($"Subject: {mailMessage.Subject}");
                     mailResult.Subject = mailMessage.Subject;
                     var msgBody = report.Settings?.Message?.Trim() ?? String.Empty;
@@ -638,17 +638,17 @@
                             msgBody = Markdown.ToHtml(msgBody);
                             break;
                         default:
-                            throw new Exception($"Unknown mail type {report.Settings.MailType}");
+                            throw new Exception($"Unknown mail type {report.Settings.MailType}.");
                     }
-                    logger.Debug($"Set mail body '{msgBody}'");
+                    logger.Debug($"Set mail body '{msgBody}'...");
                     mailMessage.Body = msgBody;
-                    logger.Debug($"Set from address '{report.ServerSettings.From}'");
-                    mailMessage.From = new MailAddress(report.ServerSettings.From);
+                    logger.Debug($"Set from address '{report?.ServerSettings?.From}'...");
+                    mailMessage.From = new MailAddress(report?.ServerSettings?.From ?? "No sender was specified.");
                     if (report.Settings.SendAttachment)
                     {
                         foreach (var attach in report.ReportPaths)
                         {
-                            logger.Debug($"Add attachment '{attach.Name}'.");
+                            logger.Debug($"Add attachment '{attach.Name}'...");
                             mailMessage.Attachments.Add(attach);
                         }
                     }
@@ -667,11 +667,11 @@
 
                     client = new SmtpClient(report.ServerSettings.Host, report.ServerSettings.Port);
 
-                    logger.Debug($"Set Credential '{report.ServerSettings.Username}'");
+                    logger.Debug($"Set Credential '{report.ServerSettings.Username}'...");
                     if (!String.IsNullOrEmpty(report.ServerSettings.Username) && !String.IsNullOrEmpty(report.ServerSettings.Password))
                         client.Credentials = new NetworkCredential(report.ServerSettings.Username, report.ServerSettings.Password);
 
-                    logger.Debug($"Set SSL '{report.ServerSettings.UseSsl}'");
+                    logger.Debug($"Set SSL '{report.ServerSettings.UseSsl}'...");
                     client.EnableSsl = report.ServerSettings.UseSsl;
 
                     if (report.ServerSettings.UseCertificate)
