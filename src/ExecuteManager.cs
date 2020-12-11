@@ -119,7 +119,7 @@
         #endregion
 
         #region Public Methods
-        public List<FTPResult> FtpUpload(FTPSettings settings, Report report, JobResult jobResult, int jobIndex)
+        public List<FTPResult> FtpUpload(FTPSettings settings, Report report, JobResult jobResult, int taskIndex)
         {
             var fileResults = new List<FTPResult>();
             var reportName = report?.Name ?? null;
@@ -139,7 +139,7 @@
                     {
                         Success = false,
                         ReportState = "ERROR",
-                        JobName = $"Job{jobIndex}",
+                        TaskName = $"Task {taskIndex}",
                         Message = message,
                         ReportName = reportName
                     });
@@ -205,7 +205,7 @@
                             Success = true,
                             ReportState = GetFormatedState(jobResult),
                             ReportName = reportName,
-                            JobName = $"Job{jobIndex}",
+                            TaskName = $"Task {taskIndex}",
                             Message = "FTP upload was executed successfully.",
                             FtpPath = targetFtpFile
                         });
@@ -224,7 +224,7 @@
                 {
                     Success = false,
                     ReportState = "ERROR",
-                    JobName = $"Job{jobIndex}",
+                    TaskName = $"Task {taskIndex}",
                     Message = ex.Message,
                     ReportName = reportName
                 });
@@ -232,7 +232,7 @@
             }
         }
 
-        public List<FileResult> CopyFile(FileSettings settings, Report report, Connection fileConnection, JobResult jobResult, int jobIndex)
+        public List<FileResult> CopyFile(FileSettings settings, Report report, Connection fileConnection, JobResult jobResult, int taskIndex)
         {
             var fileResults = new List<FileResult>();
             var reportName = report?.Name ?? null;
@@ -252,7 +252,7 @@
                     { 
                         Success = false, 
                         ReportState = "ERROR",
-                        JobName = $"Job{jobIndex}",
+                        TaskName = $"Task {taskIndex}",
                         Message = message, 
                         ReportName = reportName 
                     });
@@ -271,7 +271,7 @@
                         Success = false, 
                         ReportState = "ERROR", 
                         Message = message,
-                        JobName = $"Job{jobIndex}",
+                        TaskName = $"Task {taskIndex}",
                         ReportName = reportName 
                     });
                     return fileResults;
@@ -325,7 +325,7 @@
                     {
                         Success = true,
                         ReportState = GetFormatedState(jobResult),
-                        JobName = $"Job{jobIndex}",
+                        TaskName = $"Task {taskIndex}",
                         ReportName = reportName,
                         Message = "Report was successful created.",
                         CopyPath = targetFile
@@ -342,7 +342,7 @@
                 { 
                     Success = false, 
                     ReportState = "ERROR",
-                    JobName = $"Job{jobIndex}",
+                    TaskName = $"Task {taskIndex}",
                     Message = ex.Message, 
                     ReportName = reportName 
                 });
@@ -391,7 +391,7 @@
             }
         }
 
-        public List<HubResult> UploadToHub(HubSettings settings, Report report, Connection hubConnection, DomainUser sessionUser, JobResult jobResult, int jobIndex)
+        public List<HubResult> UploadToHub(HubSettings settings, Report report, Connection hubConnection, DomainUser sessionUser, JobResult jobResult, int taskIndex)
         {
             var reportName = report?.Name ?? null;
 
@@ -538,7 +538,7 @@
                         {
                             Success = true,
                             ReportState = GetFormatedState(jobResult),
-                            JobName = $"Job{jobIndex}",
+                            TaskName = $"Task {taskIndex}",
                             Message = "Upload to the hub was successful.",
                             Link = link
                         });
@@ -557,7 +557,7 @@
                     { 
                         Success = false,
                         ReportState = "ERROR",
-                        JobName = $"Job{jobIndex}",
+                        TaskName = $"Task {taskIndex}",
                         Message = ex.Message 
                     });
                 }
@@ -569,7 +569,7 @@
             return results;
         }
 
-        public List<MailResult> SendMails(List<MailSettings> settingsList, DistibuteOptions options, JobResult jobResult, int jobIndex)
+        public List<MailResult> SendMails(List<MailSettings> settingsList, DistibuteOptions options, JobResult jobResult, int taskIndex)
         {
             SmtpClient client = null;
             var mailMessage = new MailMessage();
@@ -699,7 +699,7 @@
                             client.Send(mailMessage);
                             mailResult.Message = "Sending the mail(s) was successful.";
                             mailResult.Success = true;
-                            mailResult.JobName = $"Job{jobIndex}";
+                            mailResult.TaskName = $"Task {taskIndex}";
                             mailResult.ReportState = GetFormatedState(jobResult);
                         }).Wait();
                     }
@@ -708,7 +708,7 @@
                         mailResult.Message = "Mail without mail Address could not be sent.";
                         logger.Error(mailResult.Message);
                         mailResult.Success = false;
-                        mailResult.JobName = $"Job{jobIndex}";
+                        mailResult.TaskName = $"Task {taskIndex}";
                         mailResult.ReportState = "ERROR";
                         jobResult.Exception = ReportException.GetException(mailResult.Message);
                         jobResult.Status = TaskStatusInfo.ERROR;
@@ -731,7 +731,7 @@
                 jobResult.Status = TaskStatusInfo.ERROR;
                 mailResult.Success = false;
                 mailResult.ReportState = "ERROR";
-                mailResult.JobName = $"Job{jobIndex}";
+                mailResult.TaskName = $"Task {taskIndex}";
                 mailResult.Message = jobResult.Exception.FullMessage;
                 mailResults.Add(mailResult);
                 return mailResults;

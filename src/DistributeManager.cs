@@ -102,20 +102,20 @@
             {
                 var execute = new ExecuteManager();
                 logger.Info("Read job results...");
-                var jobIndex = 0;
+                var taskIndex = 0;
                 foreach (var jobResult in jobResults)
                 {
                     //Check Cancel
                     options.CancelToken?.ThrowIfCancellationRequested();
 
-                    jobIndex++;
+                    taskIndex++;
                     if (jobResult.Status == TaskStatusInfo.ERROR || jobResult.Status == TaskStatusInfo.RETRYERROR)
                     {
                         results.Add(new ErrorResult()
                         {
                             Success = false,
                             ReportState = "ERROR",
-                            JobName = $"Job{jobIndex}",
+                            TaskName = $"Task {taskIndex}",
                             Message = jobResult?.Exception?.FullMessage ?? "Unknown error"
                         });
                         continue;
@@ -126,7 +126,7 @@
                         {
                             Success = true,
                             ReportState = "INACTIVE",
-                            JobName = $"Job{jobIndex}",
+                            TaskName = $"Task {taskIndex}",
                             Message = jobResult?.Exception?.FullMessage ?? "inactive task"
                         });
                         continue;
@@ -137,7 +137,7 @@
                         {
                             Success = true,
                             ReportState = "ABORT",
-                            JobName = $"Job{jobIndex}",
+                            TaskName = $"Task {taskIndex}",
                             Message = jobResult?.Exception?.FullMessage ?? "Task was canceled"
                         });
                         continue;
@@ -157,7 +157,7 @@
                         {
                             Success = false,
                             ReportState = jobResult.Status.ToString().ToUpperInvariant(),
-                            JobName = $"Job{jobIndex}",
+                            TaskName = $"Task {taskIndex}",
                             Message = jobResult?.Exception?.FullMessage ?? "Unknown task status"
                         });
                         continue;
@@ -195,14 +195,14 @@
                                         var fileConnection = connectionManager.GetConnection(fileConfigs);
                                         if (fileConnection == null)
                                             throw new Exception("Could not create a connection to Qlik. (FILE)");
-                                        results.AddRange(execute.CopyFile(fileSettings, report, fileConnection, jobResult, jobIndex));
+                                        results.AddRange(execute.CopyFile(fileSettings, report, fileConnection, jobResult, taskIndex));
                                         break;
                                     case SettingsType.FTP:
                                         //Upload to FTP or FTPS
                                         logger.Info("Check - Upload to FTP...");
                                         var ftpSettings = GetSettings<FTPSettings>(location);
                                         ftpSettings.Type = SettingsType.FTP;
-                                        results.AddRange(execute.FtpUpload(ftpSettings, report, jobResult, jobIndex));
+                                        results.AddRange(execute.FtpUpload(ftpSettings, report, jobResult, taskIndex));
                                         break;
                                     case SettingsType.HUB:
                                         //Upload to hub
@@ -216,7 +216,7 @@
                                             throw new Exception("Could not create a connection to Qlik. (HUB)");
                                         if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
                                             execute.DeleteReportsFromHub(hubSettings, report, hubConnection, options.SessionUser);
-                                        results.AddRange(execute.UploadToHub(hubSettings, report, hubConnection, options.SessionUser, jobResult, jobIndex));
+                                        results.AddRange(execute.UploadToHub(hubSettings, report, hubConnection, options.SessionUser, jobResult, taskIndex));
                                         break;
                                     case SettingsType.MAIL:
                                         //Cache mail infos
@@ -239,7 +239,7 @@
                             {
                                 Success = true,
                                 Message = "No delivery type was selected for the report.",
-                                JobName = $"Job{jobIndex}",
+                                TaskName = $"Task {taskIndex}",
                                 ReportState = jobResult.Status.ToString().ToUpperInvariant()
                             });
                         }
@@ -249,7 +249,7 @@
                     if (mailList.Count > 0)
                     {
                         logger.Info("Check - Send Mails...");
-                        results.AddRange(execute.SendMails(mailList, options, jobResult, jobIndex));
+                        results.AddRange(execute.SendMails(mailList, options, jobResult, taskIndex));
                     }
                 }
 
