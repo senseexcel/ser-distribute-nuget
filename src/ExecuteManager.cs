@@ -119,7 +119,7 @@
         #endregion
 
         #region Public Methods
-        public List<FTPResult> FtpUpload(FTPSettings settings, Report report, JobResult jobResult)
+        public List<FTPResult> FtpUpload(FTPSettings settings, Report report, JobResult jobResult, int jobIndex)
         {
             var fileResults = new List<FTPResult>();
             var reportName = report?.Name ?? null;
@@ -135,7 +135,14 @@
                     logger.Error(message);
                     jobResult.Exception = ReportException.GetException(message);
                     jobResult.Status = TaskStatusInfo.ERROR;
-                    fileResults.Add(new FTPResult() { Success = false, ReportState = "ERROR", Message = message, ReportName = reportName });
+                    fileResults.Add(new FTPResult()
+                    {
+                        Success = false,
+                        ReportState = "ERROR",
+                        JobName = $"Job{jobIndex}",
+                        Message = message,
+                        ReportName = reportName
+                    });
                     return fileResults;
                 }
 
@@ -193,13 +200,14 @@
                     // Upload File
                     var ftpStatus = ftpClient.UploadFile(reportPath, targetFtpFile, ftpRemoteExists);
                     if (ftpStatus.IsSuccess())
-                        fileResults.Add(new FTPResult() 
-                        { 
-                            Success = true, 
-                            ReportState = GetFormatedState(jobResult), 
-                            ReportName = reportName, 
-                            Message = "FTP upload was executed successfully.", 
-                            FtpPath = targetFtpFile 
+                        fileResults.Add(new FTPResult()
+                        {
+                            Success = true,
+                            ReportState = GetFormatedState(jobResult),
+                            ReportName = reportName,
+                            JobName = $"Job{jobIndex}",
+                            Message = "FTP upload was executed successfully.",
+                            FtpPath = targetFtpFile
                         });
                     else
                         throw new Exception($"The FTP File '{targetFtpFile}' upload failed.");
@@ -212,12 +220,19 @@
                 logger.Error(ex, "The delivery process for 'ftp' failed.");
                 jobResult.Exception = ReportException.GetException(ex);
                 jobResult.Status = TaskStatusInfo.ERROR;
-                fileResults.Add(new FTPResult() { Success = false, ReportState = "ERROR", Message = ex.Message, ReportName = reportName });
+                fileResults.Add(new FTPResult()
+                {
+                    Success = false,
+                    ReportState = "ERROR",
+                    JobName = $"Job{jobIndex}",
+                    Message = ex.Message,
+                    ReportName = reportName
+                });
                 return fileResults;
             }
         }
 
-        public List<FileResult> CopyFile(FileSettings settings, Report report, Connection fileConnection, JobResult jobResult)
+        public List<FileResult> CopyFile(FileSettings settings, Report report, Connection fileConnection, JobResult jobResult, int jobIndex)
         {
             var fileResults = new List<FileResult>();
             var reportName = report?.Name ?? null;
@@ -233,7 +248,14 @@
                     logger.Error(message);
                     jobResult.Exception = ReportException.GetException(message);
                     jobResult.Status = TaskStatusInfo.ERROR;
-                    fileResults.Add(new FileResult() { Success = false, ReportState = "ERROR", Message = message, ReportName = reportName });
+                    fileResults.Add(new FileResult() 
+                    { 
+                        Success = false, 
+                        ReportState = "ERROR",
+                        JobName = $"Job{jobIndex}",
+                        Message = message, 
+                        ReportName = reportName 
+                    });
                     return fileResults;
                 }
 
@@ -244,7 +266,14 @@
                     logger.Error(message);
                     jobResult.Exception = ReportException.GetException(message);
                     jobResult.Status = TaskStatusInfo.ERROR;
-                    fileResults.Add(new FileResult() { Success = false, ReportState = "ERROR", Message = message, ReportName = reportName });
+                    fileResults.Add(new FileResult() 
+                    { 
+                        Success = false, 
+                        ReportState = "ERROR", 
+                        Message = message,
+                        JobName = $"Job{jobIndex}",
+                        ReportName = reportName 
+                    });
                     return fileResults;
                 }
 
@@ -292,13 +321,14 @@
                             throw new Exception($"Unkown distribute mode {settings.Mode}");
                     }
                     logger.Info($"The file '{targetFile}' was copied...");
-                    fileResults.Add(new FileResult() 
-                    { 
-                        Success = true, 
-                        ReportState = GetFormatedState(jobResult), 
-                        ReportName = reportName, 
-                        Message = "Report was successful created.", 
-                        CopyPath = targetFile 
+                    fileResults.Add(new FileResult()
+                    {
+                        Success = true,
+                        ReportState = GetFormatedState(jobResult),
+                        JobName = $"Job{jobIndex}",
+                        ReportName = reportName,
+                        Message = "Report was successful created.",
+                        CopyPath = targetFile
                     });
                 }
                 return fileResults;
@@ -308,7 +338,14 @@
                 logger.Error(ex, "The delivery process for 'files' failed.");
                 jobResult.Exception = ReportException.GetException(ex);
                 jobResult.Status = TaskStatusInfo.ERROR;
-                fileResults.Add(new FileResult() { Success = false, ReportState = "ERROR", Message = ex.Message, ReportName = reportName });
+                fileResults.Add(new FileResult() 
+                { 
+                    Success = false, 
+                    ReportState = "ERROR",
+                    JobName = $"Job{jobIndex}",
+                    Message = ex.Message, 
+                    ReportName = reportName 
+                });
                 return fileResults;
             }
             finally
@@ -354,7 +391,7 @@
             }
         }
 
-        public List<HubResult> UploadToHub(HubSettings settings, Report report, Connection hubConnection, DomainUser sessionUser, JobResult jobResult)
+        public List<HubResult> UploadToHub(HubSettings settings, Report report, Connection hubConnection, DomainUser sessionUser, JobResult jobResult, int jobIndex)
         {
             var reportName = report?.Name ?? null;
 
@@ -497,12 +534,13 @@
                         var link = hubInfo?.References?.FirstOrDefault(r => r.LogicalPath.Contains($"/{filename}"))?.ExternalPath ?? null;
                         if (link == null)
                             throw new Exception($"The download link is empty. Please check the security rules. (Name: {filename} - References: {hubInfo?.References?.Count}) - User: {hubUser}.");
-                        results.Add(new HubResult() 
-                        { 
-                            Success = true, 
-                            ReportState = GetFormatedState(jobResult), 
-                            Message = "Upload to the hub was successful.", 
-                            Link = link 
+                        results.Add(new HubResult()
+                        {
+                            Success = true,
+                            ReportState = GetFormatedState(jobResult),
+                            JobName = $"Job{jobIndex}",
+                            Message = "Upload to the hub was successful.",
+                            Link = link
                         });
                     }
                     else
@@ -515,7 +553,13 @@
                     logger.Error(ex, "The delivery process for 'hub' failed.");
                     jobResult.Exception = ReportException.GetException(ex);
                     jobResult.Status = TaskStatusInfo.ERROR;
-                    results.Add(new HubResult() { Success = false, ReportState = "ERROR", Message = ex.Message });
+                    results.Add(new HubResult() 
+                    { 
+                        Success = false,
+                        ReportState = "ERROR",
+                        JobName = $"Job{jobIndex}",
+                        Message = ex.Message 
+                    });
                 }
                 finally
                 {
@@ -525,7 +569,7 @@
             return results;
         }
 
-        public List<MailResult> SendMails(List<MailSettings> settingsList, DistibuteOptions options, JobResult jobResult)
+        public List<MailResult> SendMails(List<MailSettings> settingsList, DistibuteOptions options, JobResult jobResult, int jobIndex)
         {
             SmtpClient client = null;
             var mailMessage = new MailMessage();
@@ -655,6 +699,7 @@
                             client.Send(mailMessage);
                             mailResult.Message = "Sending the mail(s) was successful.";
                             mailResult.Success = true;
+                            mailResult.JobName = $"Job{jobIndex}";
                             mailResult.ReportState = GetFormatedState(jobResult);
                         }).Wait();
                     }
@@ -663,6 +708,7 @@
                         mailResult.Message = "Mail without mail Address could not be sent.";
                         logger.Error(mailResult.Message);
                         mailResult.Success = false;
+                        mailResult.JobName = $"Job{jobIndex}";
                         mailResult.ReportState = "ERROR";
                         jobResult.Exception = ReportException.GetException(mailResult.Message);
                         jobResult.Status = TaskStatusInfo.ERROR;
@@ -685,6 +731,7 @@
                 jobResult.Status = TaskStatusInfo.ERROR;
                 mailResult.Success = false;
                 mailResult.ReportState = "ERROR";
+                mailResult.JobName = $"Job{jobIndex}";
                 mailResult.Message = jobResult.Exception.FullMessage;
                 mailResults.Add(mailResult);
                 return mailResults;

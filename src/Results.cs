@@ -14,6 +14,9 @@
         public abstract string DistributionMode { get; set; }
 
         [JsonProperty(Required = Required.Always)]
+        public string JobName { get; set; }
+
+        [JsonProperty(Required = Required.Always)]
         public bool Success { get; set; }
 
         [JsonProperty(Required = Required.Always)]

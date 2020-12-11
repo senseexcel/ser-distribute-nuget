@@ -102,6 +102,7 @@
             {
                 var execute = new ExecuteManager();
                 logger.Info("Read job results...");
+                var jobIndex = 0;
                 foreach (var jobResult in jobResults)
                 {
                     //Check Cancel
@@ -109,36 +110,55 @@
 
                     if (jobResult.Status == TaskStatusInfo.ERROR || jobResult.Status == TaskStatusInfo.RETRYERROR)
                     {
-                        results.Add(new ErrorResult() { Success = false, ReportState = "ERROR", 
-                                                        Message = jobResult?.Exception?.FullMessage ?? "Unknown error" });
+                        results.Add(new ErrorResult()
+                        {
+                            Success = false,
+                            ReportState = "ERROR",
+                            JobName = $"Job{jobIndex}",
+                            Message = jobResult?.Exception?.FullMessage ?? "Unknown error"
+                        });
                         continue;
                     }
                     else if (jobResult.Status == TaskStatusInfo.INACTIVE)
                     {
-                        results.Add(new ErrorResult() { Success = true, ReportState = "INACTIVE", 
-                                                        Message = jobResult?.Exception?.FullMessage ?? "inactive task" });
+                        results.Add(new ErrorResult()
+                        {
+                            Success = true,
+                            ReportState = "INACTIVE",
+                            JobName = $"Job{jobIndex}",
+                            Message = jobResult?.Exception?.FullMessage ?? "inactive task"
+                        });
                         continue;
                     }
-                    else if(jobResult.Status == TaskStatusInfo.ABORT)
+                    else if (jobResult.Status == TaskStatusInfo.ABORT)
                     {
-                        results.Add(new ErrorResult() { Success = true, ReportState = "ABORT", 
-                                                        Message = jobResult?.Exception?.FullMessage ?? "Task was canceled"});
+                        results.Add(new ErrorResult()
+                        {
+                            Success = true,
+                            ReportState = "ABORT",
+                            JobName = $"Job{jobIndex}",
+                            Message = jobResult?.Exception?.FullMessage ?? "Task was canceled"
+                        });
                         continue;
                     }
-                    else if(jobResult.Status == TaskStatusInfo.WARNING)
+                    else if (jobResult.Status == TaskStatusInfo.WARNING)
                     {
                         logger.Info("The report status includes a warning, but it is delivered...");
                     }
-                    else if(jobResult.Status == TaskStatusInfo.SUCCESS)
+                    else if (jobResult.Status == TaskStatusInfo.SUCCESS)
                     {
                         logger.Info($"The report was successfully created and is now being delivered...");
                     }
                     else
                     {
                         logger.Error($"The report has a unknown status '{jobResult.Status}'...");
-                        results.Add(new ErrorResult() { Success = false, 
-                                                        ReportState = jobResult.Status.ToString().ToUpperInvariant(),
-                                                        Message = jobResult?.Exception?.FullMessage ?? "Unknown task status" });
+                        results.Add(new ErrorResult()
+                        {
+                            Success = false,
+                            ReportState = jobResult.Status.ToString().ToUpperInvariant(),
+                            JobName = $"Job{jobIndex}",
+                            Message = jobResult?.Exception?.FullMessage ?? "Unknown task status"
+                        });
                         continue;
                     }
 
@@ -174,14 +194,14 @@
                                         var fileConnection = connectionManager.GetConnection(fileConfigs);
                                         if (fileConnection == null)
                                             throw new Exception("Could not create a connection to Qlik. (FILE)");
-                                        results.AddRange(execute.CopyFile(fileSettings, report, fileConnection, jobResult));
+                                        results.AddRange(execute.CopyFile(fileSettings, report, fileConnection, jobResult, jobIndex));
                                         break;
                                     case SettingsType.FTP:
                                         //Upload to FTP or FTPS
                                         logger.Info("Check - Upload to FTP...");
                                         var ftpSettings = GetSettings<FTPSettings>(location);
                                         ftpSettings.Type = SettingsType.FTP;
-                                        results.AddRange(execute.FtpUpload(ftpSettings, report, jobResult));
+                                        results.AddRange(execute.FtpUpload(ftpSettings, report, jobResult, jobIndex));
                                         break;
                                     case SettingsType.HUB:
                                         //Upload to hub
@@ -195,7 +215,7 @@
                                             throw new Exception("Could not create a connection to Qlik. (HUB)");
                                         if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
                                             execute.DeleteReportsFromHub(hubSettings, report, hubConnection, options.SessionUser);
-                                        results.AddRange(execute.UploadToHub(hubSettings, report, hubConnection, options.SessionUser, jobResult));
+                                        results.AddRange(execute.UploadToHub(hubSettings, report, hubConnection, options.SessionUser, jobResult, jobIndex));
                                         break;
                                     case SettingsType.MAIL:
                                         //Cache mail infos
@@ -212,12 +232,13 @@
                             }
                         }
 
-                        if(distibuteActivationCount == 0)
+                        if (distibuteActivationCount == 0)
                         {
-                            results.Add(new DistibutionResult() 
+                            results.Add(new DistibutionResult()
                             {
                                 Success = true,
-                                Message = "No delivery type was selected for the report.", 
+                                Message = "No delivery type was selected for the report.",
+                                JobName = $"Job{jobIndex}",
                                 ReportState = jobResult.Status.ToString().ToUpperInvariant()
                             });
                         }
@@ -227,7 +248,7 @@
                     if (mailList.Count > 0)
                     {
                         logger.Info("Check - Send Mails...");
-                        results.AddRange(execute.SendMails(mailList, options, jobResult));
+                        results.AddRange(execute.SendMails(mailList, options, jobResult, jobIndex));
                     }
                 }
 
