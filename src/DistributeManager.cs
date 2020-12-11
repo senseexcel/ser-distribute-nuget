@@ -108,6 +108,7 @@
                     //Check Cancel
                     options.CancelToken?.ThrowIfCancellationRequested();
 
+                    jobIndex++;
                     if (jobResult.Status == TaskStatusInfo.ERROR || jobResult.Status == TaskStatusInfo.RETRYERROR)
                     {
                         results.Add(new ErrorResult()
