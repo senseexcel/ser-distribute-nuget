@@ -12,6 +12,7 @@
     using Q2g.HelperQlik;
     using System.Threading;
     using Ser.Api;
+    using Ser.Distribute.Actions;
     #endregion
 
     public class DistributeManager
@@ -24,7 +25,8 @@
         public string ErrorMessage { get; private set; }
         #endregion
 
-        private T GetSettings<T>(JToken json, bool typeOnly = false) where T : ISettings, new()
+        #region Private Methods
+        private static T GetSettings<T>(JToken json, bool typeOnly = false) where T : DistibuteSettings, new()
         {
             try
             {
@@ -52,8 +54,29 @@
                 logger.Error(ex);
                 return default;
             }
-        }
+        } 
 
+        private static List<BaseResult> NormalizeReportState(List<BaseResult> results)
+        {
+            var groupedResults = results.GroupBy(r => r.TaskName).Select(grp => grp.ToList()).ToList();
+            foreach (var groupedResult in groupedResults)
+            {
+                foreach (var jobResult in groupedResult)
+                {
+                    var state = jobResult?.ReportState ?? null;
+                    if(state?.ToLowerInvariant() == "error" && groupedResult.Count > 1)
+                    {
+                        foreach (var jobInternalResult in groupedResult)
+                            jobInternalResult.ReportState = "ERROR";
+                        break;
+                    }
+                }
+            }
+            return groupedResults.SelectMany(r => r).ToList();
+        }
+        #endregion
+
+        #region Public Methods
         public string Run(string resultFolder, DistibuteOptions options)
         {
             try
@@ -100,7 +123,6 @@
 
             try
             {
-                var execute = new ExecuteManager();
                 logger.Info("Read job results...");
                 var taskIndex = 0;
                 foreach (var jobResult in jobResults)
@@ -109,13 +131,14 @@
                     options.CancelToken?.ThrowIfCancellationRequested();
 
                     taskIndex++;
+                    jobResult.TaskName = $"Task {taskIndex}";
                     if (jobResult.Status == TaskStatusInfo.ERROR || jobResult.Status == TaskStatusInfo.RETRYERROR)
                     {
                         results.Add(new ErrorResult()
                         {
                             Success = false,
                             ReportState = "ERROR",
-                            TaskName = $"Task {taskIndex}",
+                            TaskName = jobResult.TaskName,
                             Message = jobResult?.Exception?.FullMessage ?? "Unknown error"
                         });
                         continue;
@@ -126,7 +149,7 @@
                         {
                             Success = true,
                             ReportState = "INACTIVE",
-                            TaskName = $"Task {taskIndex}",
+                            TaskName = jobResult.TaskName,
                             Message = jobResult?.Exception?.FullMessage ?? "inactive task"
                         });
                         continue;
@@ -137,7 +160,7 @@
                         {
                             Success = true,
                             ReportState = "ABORT",
-                            TaskName = $"Task {taskIndex}",
+                            TaskName = jobResult.TaskName,
                             Message = jobResult?.Exception?.FullMessage ?? "Task was canceled"
                         });
                         continue;
@@ -157,14 +180,16 @@
                         {
                             Success = false,
                             ReportState = jobResult.Status.ToString().ToUpperInvariant(),
-                            TaskName = $"Task {taskIndex}",
+                            TaskName = jobResult.TaskName,
                             Message = jobResult?.Exception?.FullMessage ?? "Unknown task status"
                         });
                         continue;
                     }
 
-                    var mailList = new List<MailSettings>();
-                    var uploadTasks = new List<Task<HubResult>>();
+                    var fileSystemAction = new FileSystemAction(jobResult);
+                    var ftpAction = new FtpAction(jobResult);
+                    var hubAction = new HubAction(jobResult);
+                    var mailAction = new MailAction(jobResult, options.PrivateKeyPath);
                     foreach (var report in jobResult.Reports)
                     {
                         //Check Cancel
@@ -180,7 +205,7 @@
                             //Check Cancel
                             options.CancelToken?.ThrowIfCancellationRequested();
 
-                            var settings = GetSettings<BaseDeliverySettings>(location, true);
+                            var settings = GetSettings<DistibuteSettings>(location, true);
                             if (settings.Active ?? true)
                             {
                                 distibuteActivationCount++;
@@ -195,14 +220,17 @@
                                         var fileConnection = connectionManager.GetConnection(fileConfigs);
                                         if (fileConnection == null)
                                             throw new Exception("Could not create a connection to Qlik. (FILE)");
-                                        results.AddRange(execute.CopyFile(fileSettings, report, fileConnection, jobResult, taskIndex));
+                                        fileSettings.SocketConnection = fileConnection;
+                                        fileSystemAction.CopyFile(report, fileSettings);
+                                        results.AddRange(fileSystemAction.Results);
                                         break;
                                     case SettingsType.FTP:
                                         //Upload to FTP or FTPS
                                         logger.Info("Check - Upload to FTP...");
                                         var ftpSettings = GetSettings<FTPSettings>(location);
                                         ftpSettings.Type = SettingsType.FTP;
-                                        results.AddRange(execute.FtpUpload(ftpSettings, report, jobResult, taskIndex));
+                                        ftpAction.FtpUpload(report, ftpSettings);
+                                        results.AddRange(ftpAction.Results);
                                         break;
                                     case SettingsType.HUB:
                                         //Upload to hub
@@ -214,17 +242,16 @@
                                         var hubConnection = connectionManager.GetConnection(hubConfigs);
                                         if (hubConnection == null)
                                             throw new Exception("Could not create a connection to Qlik. (HUB)");
-                                        if (hubSettings.Mode == DistributeMode.DELETEALLFIRST)
-                                            execute.DeleteReportsFromHub(hubSettings, report, hubConnection, options.SessionUser);
-                                        results.AddRange(execute.UploadToHub(hubSettings, report, hubConnection, options.SessionUser, jobResult, taskIndex));
+                                        hubSettings.SocketConnection = hubConnection;
+                                        hubSettings.SessionUser = options.SessionUser;
+                                        hubAction.UploadToHub(report, hubSettings); 
+                                        results.AddRange(hubAction.Results);
                                         break;
                                     case SettingsType.MAIL:
                                         //Cache mail infos
                                         logger.Info("Check - Cache Mail...");
                                         var mailSettings = GetSettings<MailSettings>(location);
-                                        mailSettings.Type = SettingsType.MAIL;
-                                        mailSettings.MailReports.Add(report);
-                                        mailList.Add(mailSettings);
+                                        mailAction.AddMailSettings(mailSettings, report);
                                         break;
                                     default:
                                         logger.Warn($"The delivery type of json {location} is unknown.");
@@ -239,27 +266,29 @@
                             {
                                 Success = true,
                                 Message = "No delivery type was selected for the report.",
-                                TaskName = $"Task {taskIndex}",
+                                TaskName = jobResult.TaskName,
                                 ReportState = jobResult.Status.ToString().ToUpperInvariant()
                             });
                         }
                     }
 
-                    //Send Mail
-                    if (mailList.Count > 0)
+                    if (mailAction.MailSettingsList.Count > 0)
                     {
-                        logger.Info("Check - Send Mails...");
-                        results.AddRange(execute.SendMails(mailList, options, jobResult, taskIndex));
+                        //Send Mail
+                        logger.Info("Send Mails...");
+                        mailAction.SendMails();
+                        results.AddRange(mailAction.Results);
                     }
                 }
 
-                execute.CleanUp();
+                //Make all Sockets free
                 connectionManager.MakeFree();
 
                 //Check Cancel
                 options.CancelToken?.ThrowIfCancellationRequested();
 
-                results = results.OrderBy(r => r.GetType().Name).ToList();
+                results = results.OrderBy(r => r.TaskName).ToList();
+                results = NormalizeReportState(results);
                 return JsonConvert.SerializeObject(results, Formatting.Indented);
             }
             catch (OperationCanceledException ex)
@@ -279,5 +308,6 @@
                 connectionManager.MakeFree();
             }
         }
+        #endregion
     }
 }
