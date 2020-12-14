@@ -44,6 +44,8 @@
                             return new T() { Type = SettingsType.FILE, Active = active };
                         case "ftp":
                             return new T() { Type = SettingsType.FTP, Active = active };
+                        case "http":
+                            return new T() { Type = SettingsType.HTTP, Active = active };
                     }
                 }
 
@@ -54,7 +56,7 @@
                 logger.Error(ex);
                 return default;
             }
-        } 
+        }
 
         private static List<BaseResult> NormalizeReportState(List<BaseResult> results)
         {
@@ -64,7 +66,7 @@
                 foreach (var jobResult in groupedResult)
                 {
                     var state = jobResult?.ReportState ?? null;
-                    if(state?.ToLowerInvariant() == "error" && groupedResult.Count > 1)
+                    if (state?.ToLowerInvariant() == "error" && groupedResult.Count > 1)
                     {
                         foreach (var jobInternalResult in groupedResult)
                             jobInternalResult.ReportState = "ERROR";
@@ -244,7 +246,7 @@
                                             throw new Exception("Could not create a connection to Qlik. (HUB)");
                                         hubSettings.SocketConnection = hubConnection;
                                         hubSettings.SessionUser = options.SessionUser;
-                                        hubAction.UploadToHub(report, hubSettings); 
+                                        hubAction.UploadToHub(report, hubSettings);
                                         results.AddRange(hubAction.Results);
                                         break;
                                     case SettingsType.MAIL:

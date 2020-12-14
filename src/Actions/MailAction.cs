@@ -202,7 +202,7 @@
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "The delivery process for 'mail' failed.");
+                logger.Error(ex, "The delivery via 'Mail' failed.");
                 if (mailMessage != null)
                     mailMessage.Dispose();
                 if (client != null)

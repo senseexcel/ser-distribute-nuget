@@ -104,7 +104,7 @@
             }
             catch (Exception ex)
             {
-                logger.Error(ex, "The delivery process for 'ftp' failed.");
+                logger.Error(ex, "The delivery via 'ftp' failed.");
                 JobResult.Exception = ReportException.GetException(ex);
                 JobResult.Status = TaskStatusInfo.ERROR;
                 Results.Add(new FTPResult()
