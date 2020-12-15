@@ -55,7 +55,7 @@
                     return new MessengerResult()
                     {
                         Message = "Message was successfully transferred to Microsoft Teams.",
-                        ReportName = "MessengerReport",
+                        ReportName = "A messenger has no report name",
                         ReportState = GetFormatedState(),
                         Success = true,
                         TaskName = Settings.JobResult.TaskName
