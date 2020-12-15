@@ -92,6 +92,11 @@
                 logger.Error(ex, "Reports could not delete");
             }
         }
+
+        private static string GetFullLink(Uri baseUrl, string conentUrl)
+        {
+            return $"{baseUrl.Scheme}://{baseUrl.Host}{conentUrl}";
+        }
         #endregion
 
         public void UploadToHub(Report report, HubSettings settings)
@@ -248,7 +253,9 @@
                             ReportState = GetFormatedState(),
                             TaskName = JobResult.TaskName,
                             Message = "Upload to the hub was successful.",
-                            Link = link
+                            Link = link,
+                            ReportName = contentName,
+                            FullLink = GetFullLink(qrsApi.ConnectUri, link)
                         });
                     }
                     else

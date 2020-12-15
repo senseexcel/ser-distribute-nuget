@@ -84,27 +84,14 @@
             var results = new List<MessengerResult>();
             foreach (var messenger in messengerList)
             {
-                try
+                switch (messenger.Messenger)
                 {
-                    switch (messenger.Messenger)
-                    {
-                        case MessengerType.MICROSOFTTEAMS:
-                            var msTeams = new MicrosoftTeams(messenger);
-                            results.Add(msTeams.SendMessage(distibuteResults));
-                            break;
-                        default:
-                            throw new Exception($"Unkown messenger '{messenger.Messenger}'.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    results.Add(new MessengerResult()
-                    {
-                        Message = ex.Message,
-                        Success = false,
-                        TaskName = messenger.JobResult.TaskName,
-                        ReportState = "ERRROR"
-                    });
+                    case MessengerType.MICROSOFTTEAMS:
+                        var msTeams = new MicrosoftTeams(messenger);
+                        results.Add(msTeams.SendMessage(distibuteResults));
+                        break;
+                    default:
+                        throw new Exception($"Unkown messenger '{messenger.Messenger}'.");
                 }
             }
             return results;
@@ -326,7 +313,7 @@
                     if (messengerList.Count > 0)
                     {
                         logger.Info("Send report infos with messenger...");
-                        SendBotMessages(results, messengerList);
+                        results.AddRange(SendBotMessages(results, messengerList));
                     }
                 }
 

@@ -65,7 +65,7 @@
         #region Properties
         public override string DistributionMode { get; set; } = "Hub";
         public string Link { get; set; }
-        public string Messenger { get; set; } = "No Messenger use.";
+        public string FullLink { get; set; }
         [JsonIgnore]
         public List<string> SendMessageList { get; set; } = new List<string>();
         #endregion

@@ -20,7 +20,7 @@
             Settings = settings;
             Client = new HttpClient()
             {
-                BaseAddress = new Uri($"{Settings?.Url?.Scheme}:\\{Settings?.Url?.Host}")
+                BaseAddress = new Uri($"{Settings?.Url?.Scheme}://{Settings?.Url?.Host}")
             };
         }
         #endregion
@@ -47,7 +47,7 @@
                 if (distibuteResult.GetType() == typeof(HubResult))
                 {
                     var hubResult = CastResult<HubResult>(distibuteResult);
-                    return $"<p>Click on the following link <a href=\"{hubResult.Link}\">{hubResult.ReportName}</a> to open the report on the hub.</p>";
+                    return $"<p>Click on the following link <a href=\"{hubResult.FullLink}\">{hubResult.ReportName}</a> to open the report on the hub.</p>";
                 }
                 else if(distibuteResult.GetType() == typeof(FTPResult))
                 {
