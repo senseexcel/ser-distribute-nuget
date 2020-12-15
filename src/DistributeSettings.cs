@@ -25,7 +25,12 @@
         FILE,
         HUB,
         FTP,
-        HTTP
+        MESSENGER
+    }
+
+    public enum MessengerType
+    {
+        MICROSOFTTEAMS
     }
 
     public enum DistributeMode
@@ -67,7 +72,6 @@
         public string SharedContentType { get; set; } = "Qlik report";
         public string Owner { get; set; }
         public DistributeMode Mode { get; set; }
-        public MSTeamsChatMessage Messenger { get; set; }
 
         [JsonProperty(nameof(Connections)), JsonConverter(typeof(SingleValueArrayConverter))]
         public List<SerConnection> Connections { get; set; }
@@ -111,14 +115,14 @@
         #endregion
     }
 
-    public class HttpSettings : DistibuteSettings
+    public class MessengerSettings : DistibuteSettings
     {
         #region Properties
+        public MessengerType Messenger { get; set; }
         public Uri Url { get; set; }
-        public string Body { get; set; }
-        public string MediaType { get; set; }
-        public int Port { get; set; } = 80;
-        public List<string> Headers { get; set; } = new List<string>();
+
+        [JsonIgnore]
+        public JobResult JobResult { get; set; }
         #endregion
     }
 
@@ -157,14 +161,6 @@
         public bool UseSsl { get; set; }
         public bool UseCertificate { get; set; }
         public int SendDelay { get; set; } = 0;
-        #endregion
-    }
-
-    public class MSTeamsChatMessage
-    {
-        #region Properties
-        public Uri Url { get; set; }
-        public string Message { get; set; }
         #endregion
     }
 }

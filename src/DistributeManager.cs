@@ -13,6 +13,8 @@
     using System.Threading;
     using Ser.Api;
     using Ser.Distribute.Actions;
+    using System.Text;
+    using Ser.Distribute.Messenger;
     #endregion
 
     public class DistributeManager
@@ -44,6 +46,8 @@
                             return new T() { Type = SettingsType.FILE, Active = active };
                         case "ftp":
                             return new T() { Type = SettingsType.FTP, Active = active };
+                        case "messenger":
+                            return new T() { Type = SettingsType.MESSENGER, Active = active };
                     }
                 }
 
@@ -73,6 +77,37 @@
                 }
             }
             return groupedResults.SelectMany(r => r).ToList();
+        }
+
+        private static List<MessengerResult> SendBotMessages(List<BaseResult> distibuteResults, List<MessengerSettings> messengerList)
+        {
+            var results = new List<MessengerResult>();
+            foreach (var messenger in messengerList)
+            {
+                try
+                {
+                    switch (messenger.Messenger)
+                    {
+                        case MessengerType.MICROSOFTTEAMS:
+                            var msTeams = new MicrosoftTeams(messenger);
+                            results.Add(msTeams.SendMessage(distibuteResults));
+                            break;
+                        default:
+                            throw new Exception($"Unkown messenger '{messenger.Messenger}'.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    results.Add(new MessengerResult()
+                    {
+                        Message = ex.Message,
+                        Success = false,
+                        TaskName = messenger.JobResult.TaskName,
+                        ReportState = "ERRROR"
+                    });
+                }
+            }
+            return results;
         }
         #endregion
 
@@ -190,6 +225,7 @@
                     var ftpAction = new FtpAction(jobResult);
                     var hubAction = new HubAction(jobResult);
                     var mailAction = new MailAction(jobResult, options.PrivateKeyPath);
+                    var messengerList = new List<MessengerSettings>();
                     foreach (var report in jobResult.Reports)
                     {
                         //Check Cancel
@@ -211,6 +247,12 @@
                                 distibuteActivationCount++;
                                 switch (settings.Type)
                                 {
+                                    case SettingsType.MESSENGER:
+                                        var messengerSettings = GetSettings<MessengerSettings>(location);
+                                        messengerSettings.Type = SettingsType.MESSENGER;
+                                        messengerSettings.JobResult = jobResult;
+                                        messengerList.Add(messengerSettings);
+                                        break;
                                     case SettingsType.FILE:
                                         //Copy reports
                                         logger.Info("Check - Copy Files...");
@@ -274,10 +316,17 @@
 
                     if (mailAction.MailSettingsList.Count > 0)
                     {
-                        //Send Mail
-                        logger.Info("Send Mails...");
+                        //Send Mails
+                        logger.Info("Send mails...");
                         mailAction.SendMails();
                         results.AddRange(mailAction.Results);
+                    }
+
+                    //Send Messanger messages
+                    if (messengerList.Count > 0)
+                    {
+                        logger.Info("Send report infos with messenger...");
+                        SendBotMessages(results, messengerList);
                     }
                 }
 

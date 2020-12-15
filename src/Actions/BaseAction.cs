@@ -34,7 +34,7 @@
 
         protected string GetFormatedState()
         {
-            return JobResult.Status.ToString().ToUpperInvariant();
+            return JobResult?.Status.ToString()?.ToUpperInvariant() ?? "Unknown state";
         }
         #endregion
     }

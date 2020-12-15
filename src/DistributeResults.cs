@@ -50,6 +50,15 @@
     }
 
     [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,
+                NamingStrategyType = typeof(CamelCaseNamingStrategy))]
+    public class MessengerResult : BaseResult
+    {
+        #region Properties
+        public override string DistributionMode { get; set; } = "Messenger";
+        #endregion
+    }
+
+    [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore,
                  NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class HubResult : BaseResult
     {
@@ -57,6 +66,8 @@
         public override string DistributionMode { get; set; } = "Hub";
         public string Link { get; set; }
         public string Messenger { get; set; } = "No Messenger use.";
+        [JsonIgnore]
+        public List<string> SendMessageList { get; set; } = new List<string>();
         #endregion
     }
 
