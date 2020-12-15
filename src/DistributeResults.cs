@@ -87,7 +87,7 @@
     {
         #region Properties
         public override string DistributionMode { get; set; } = "FTP";
-        public string FtpPath { get; set; }
+        public string FtpPath { get; set; } 
         #endregion
     }
 

@@ -96,7 +96,7 @@
                             ReportName = reportName,
                             TaskName = JobResult.TaskName,
                             Message = "FTP upload was executed successfully.",
-                            FtpPath = targetFtpFile
+                            FtpPath = $"ftp://{settings.Host}{targetFtpFile}"
                         });
                     else
                         throw new Exception($"The FTP File '{targetFtpFile}' upload failed.");
