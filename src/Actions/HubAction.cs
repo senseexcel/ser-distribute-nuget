@@ -1,5 +1,5 @@
 ﻿namespace Ser.Distribute.Actions
-{  
+{
     #region Usings
     using System;
     using System.Collections.Generic;
@@ -7,6 +7,7 @@
     using System.Linq;
     using System.Net;
     using System.Net.Http;
+    using System.Text;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using Q2g.HelperQlik;
@@ -26,6 +27,34 @@
         #endregion
 
         #region Private Methods
+        private static void SendMessage(MSTeamsChatMessage messenger, string link, HubResult result)
+        {
+            var messageText = messenger?.Message?.Replace("{link}", link)?.Trim() ?? null;
+            if (messageText == null)
+            {
+                result.Messenger = "No message text found.";
+                return;
+            }
+
+            var responseJson = JObject.FromObject(new
+            {
+                contentType = "html",
+                title = "Message from AG Reporting",
+                text = messageText
+            });
+
+            var content = new StringContent(responseJson.ToString(), Encoding.UTF8, "application/json");
+            var client = new HttpClient()
+            {
+                BaseAddress = new Uri($"{messenger.Url.Scheme}://{messenger.Url.Host}")
+            };
+            var response = client.PostAsync(messenger.Url, content).Result;
+            if (response.IsSuccessStatusCode)
+                result.Messenger = "Message was sent successfully.";
+            else
+                result.Messenger = response.ToString();
+        }
+
         private static string GetContentName(string reportName, ReportData fileData)
         {
             return $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(fileData.Filename).TrimStart('.').ToUpperInvariant()})";
@@ -240,14 +269,22 @@
                         var link = hubInfo?.References?.FirstOrDefault(r => r.LogicalPath.Contains($"/{filename}"))?.ExternalPath ?? null;
                         if (link == null)
                             throw new Exception($"The download link is empty. Please check the security rules. (Name: {filename} - References: {hubInfo?.References?.Count}) - User: {hubUser}.");
-                        Results.Add(new HubResult()
+
+                        var hubResult = new HubResult()
                         {
                             Success = true,
                             ReportState = GetFormatedState(),
                             TaskName = JobResult.TaskName,
                             Message = "Upload to the hub was successful.",
                             Link = link
-                        });
+                        };
+
+                        if (settings?.Messenger != null)
+                        {
+                            logger.Info("Send message to Messenger...");
+                            SendMessage(settings.Messenger, link, hubResult);
+                        }
+                        Results.Add(hubResult);
                     }
                     else
                     {

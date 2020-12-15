@@ -20,6 +20,7 @@
 
             try
             {
+                // No nicht im Einsatz
                 if (String.IsNullOrEmpty(reportName))
                     throw new Exception("The report has no filename.");
 

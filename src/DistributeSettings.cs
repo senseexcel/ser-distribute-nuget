@@ -67,6 +67,7 @@
         public string SharedContentType { get; set; } = "Qlik report";
         public string Owner { get; set; }
         public DistributeMode Mode { get; set; }
+        public MSTeamsChatMessage Messenger { get; set; }
 
         [JsonProperty(nameof(Connections)), JsonConverter(typeof(SingleValueArrayConverter))]
         public List<SerConnection> Connections { get; set; }
@@ -156,6 +157,14 @@
         public bool UseSsl { get; set; }
         public bool UseCertificate { get; set; }
         public int SendDelay { get; set; } = 0;
+        #endregion
+    }
+
+    public class MSTeamsChatMessage
+    {
+        #region Properties
+        public Uri Url { get; set; }
+        public string Message { get; set; }
         #endregion
     }
 }

@@ -44,8 +44,6 @@
                             return new T() { Type = SettingsType.FILE, Active = active };
                         case "ftp":
                             return new T() { Type = SettingsType.FTP, Active = active };
-                        case "http":
-                            return new T() { Type = SettingsType.HTTP, Active = active };
                     }
                 }
 
