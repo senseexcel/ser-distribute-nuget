@@ -20,17 +20,31 @@
         {
             try
             {
-                var messageBuilder = new StringBuilder();
+                var messageBuilder = new StringBuilder("Hi,<br/>");
+                if(distibuteResults.Count > 0)
+                {
+                    messageBuilder.AppendLine("<p>I wanted to inform you that the reports have now been run.</p>");
+                    messageBuilder.AppendLine("<p>The results are as follows.</p>");
+                }
+
                 foreach (var result in distibuteResults)
                 {
                     var message = GetHtmlMessageFromResult(result);
                     messageBuilder.AppendLine(message);
                 }
 
+                if (messageBuilder.Length <= 8)
+                {
+                    messageBuilder.AppendLine("<p>I would like to inform you that you have not yet selected a delivery method.</p>");
+                    messageBuilder.AppendLine("<p>You can choose between Qlik hub, mail, file system and many more.</p>");
+                    messageBuilder.AppendLine("<p>You can find more information under the following link.</p>");
+                    messageBuilder.AppendLine("<p><a href=\"https://docs.analyticsgate.com/how-to/change-or-edit-the-reporting-json-script\">Overview</a></p>");
+                }
+
                 var responseJson = JObject.FromObject(new
                 {
                     contentType = "html",
-                    title = "Message from AG Reporting",
+                    title = "AG Reporting Results",
                     text = messageBuilder.ToString().Trim()
                 });
 
@@ -41,7 +55,7 @@
                     return new MessengerResult()
                     {
                         Message = "Message was successfully transferred to Microsoft Teams.",
-                        ReportName = "Microsoft Teams",
+                        ReportName = "MessengerReport",
                         ReportState = GetFormatedState(),
                         Success = true,
                         TaskName = Settings.JobResult.TaskName
@@ -57,7 +71,7 @@
                     Message = ex.Message,
                     Success = false,
                     TaskName = Settings.JobResult.TaskName,
-                    ReportState = "ERRROR"
+                    ReportState = "ERROR"
                 };
             }
         }

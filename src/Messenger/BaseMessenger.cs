@@ -57,7 +57,7 @@
                 else if (distibuteResult.GetType() == typeof(FileResult))
                 {
                     var fileResult = CastResult<FileResult>(distibuteResult);
-                    return $"<p>The file was saved to '{fileResult.CopyPath}'.</p>";
+                    return $"<p>The file was saved to the path '{fileResult.CopyPath}'.</p>";
                 }
                 else if (distibuteResult.GetType() == typeof(MailResult))
                 {
