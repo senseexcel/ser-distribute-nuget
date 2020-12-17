@@ -90,6 +90,10 @@
                         var msTeams = new MicrosoftTeams(messenger);
                         results.Add(msTeams.SendMessage(distibuteResults));
                         break;
+                    case MessengerType.SLACK:
+                        var slack = new Slack(messenger);
+                        results.Add(slack.SendMessage(distibuteResults));
+                        break;
                     default:
                         throw new Exception($"Unkown messenger '{messenger.Messenger}'.");
                 }

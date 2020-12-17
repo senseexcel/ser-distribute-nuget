@@ -40,7 +40,42 @@
             return  Settings?.JobResult?.Status.ToString()?.ToUpperInvariant() ?? "Unknown state";
         }
 
-        protected string GetHtmlMessageFromResult(BaseResult distibuteResult)
+        protected static string GetTextMessageFromResult(BaseResult distibuteResult)
+        {
+            if (distibuteResult.Success)
+            {
+                if (distibuteResult.GetType() == typeof(HubResult))
+                {
+                    var hubResult = CastResult<HubResult>(distibuteResult);
+                    return $"Click on the following link {hubResult.FullLink} to open the report on the hub.";
+                }
+                else if (distibuteResult.GetType() == typeof(FTPResult))
+                {
+                    var ftpResult = CastResult<FTPResult>(distibuteResult);
+                    return $"Click on the following link {ftpResult.FtpPath} to open the report on the ftp server.";
+                }
+                else if (distibuteResult.GetType() == typeof(FileResult))
+                {
+                    var fileResult = CastResult<FileResult>(distibuteResult);
+                    return $"The file was saved to the path '{fileResult.CopyPath}'.";
+                }
+                else if (distibuteResult.GetType() == typeof(MailResult))
+                {
+                    var mailResult = CastResult<MailResult>(distibuteResult);
+                    return $"The Mail was sent to '{mailResult.To}'.";
+                }
+                else
+                {
+                    throw new Exception($"Unknown result type '{distibuteResult?.GetType()?.Name ?? null}'.");
+                }
+            }
+            else
+            {
+                return $"The generation of the report '{distibuteResult.ReportName}' has an error.";
+            }
+        }
+
+        protected static string GetHtmlMessageFromResult(BaseResult distibuteResult)
         {
             if (distibuteResult.Success)
             {

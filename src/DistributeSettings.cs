@@ -30,7 +30,8 @@
 
     public enum MessengerType
     {
-        MICROSOFTTEAMS
+        MICROSOFTTEAMS,
+        SLACK
     }
 
     public enum DistributeMode
