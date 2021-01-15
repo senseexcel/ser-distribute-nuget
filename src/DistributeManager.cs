@@ -222,6 +222,11 @@
                         //Check Cancel
                         options.CancelToken?.ThrowIfCancellationRequested();
 
+                        fileSystemAction.Results.Clear();
+                        ftpAction.Results.Clear();
+                        hubAction.Results.Clear();
+                        mailAction.Results.Clear();
+
                         var distribute = report?.Distribute ?? null;
                         var resolver = new CryptoResolver(options.PrivateKeyPath);
                         distribute = resolver.Resolve(distribute);
