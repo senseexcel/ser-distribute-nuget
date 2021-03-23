@@ -70,7 +70,13 @@
                         {
                             logger.Debug($"Report Name: {report.Name}");
                             reportNames.Append($"{report.Name},");
-                            var fileData = report.Data.FirstOrDefault(f => Path.GetFileName(path) == f.Filename);
+                            var reportFilename = Path.GetFileName(path);
+                            var fileData = report.Data.FirstOrDefault(f => reportFilename == f.Filename);
+                            if(fileData == null)
+                            {
+                                logger.Error($"No file data to filename '{reportFilename}' found.");
+                                continue;
+                            }
                             var result = mailList.SingleOrDefault(m => m.Settings.ToString() == mailSettings.ToString());
                             if (result == null)
                             {
