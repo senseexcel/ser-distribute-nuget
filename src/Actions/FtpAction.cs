@@ -44,7 +44,7 @@
                     return;
                 }
 
-                var ftpClient = new FtpClient(settings.Host, settings.Port, settings.UserName, settings.Password);
+                var ftpClient = new FtpClient(settings.Host, settings.Port, settings.Username, settings.Password);
                 var ftpEncryptionMode = FtpEncryptionMode.None;
                 if (settings?.EncryptionMode != null)
                     ftpEncryptionMode = (FtpEncryptionMode)Enum.Parse(typeof(FtpEncryptionMode), settings.EncryptionMode);
