@@ -71,7 +71,8 @@
                             break;
                         case DistributeMode.DELETEALLFIRST:
                             logger.Debug($"The FTP file '{targetFtpFile}' could not deleted.");
-                            ftpClient.DeleteFile(targetFtpFile);
+                            if (ftpClient.FileExists(targetFtpFile))
+                                ftpClient.DeleteFile(targetFtpFile);
                             ftpRemoteExists = FtpRemoteExists.Skip;
                             break;
                         case DistributeMode.OVERRIDE:
