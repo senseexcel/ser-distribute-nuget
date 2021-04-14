@@ -159,7 +159,7 @@
                             {
                                 Name = contentName,
                                 ReportType = settings.SharedContentType,
-                                Description = "Created by Sense Excel Reporting",
+                                Description = "Created by Analytics Gate",
                                 Tags = new List<Tag>()
                                         {
                                             new Tag()
