@@ -1,14 +1,14 @@
 ﻿namespace Ser.Distribute
 {
     #region Usings
+    using System;
     using System.Collections.Generic;
     using Newtonsoft.Json.Serialization;
     using Newtonsoft.Json;
-    using Ser.Api;
-    using System.Net;
     using Q2g.HelperQlik;
     using Q2g.HelperQrs;
-    using System;
+    using Ser.Api;
+    using Ser.Api.Model;
     #endregion
 
     #region Enumerations

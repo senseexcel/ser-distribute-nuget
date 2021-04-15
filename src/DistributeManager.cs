@@ -5,16 +5,14 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Threading.Tasks;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using NLog;
     using Q2g.HelperQlik;
-    using System.Threading;
-    using Ser.Api;
     using Ser.Distribute.Actions;
-    using System.Text;
     using Ser.Distribute.Messenger;
+    using Ser.Api;
+    using Ser.Api.Model;
     #endregion
 
     public class DistributeManager
