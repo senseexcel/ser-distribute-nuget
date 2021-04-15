@@ -17,12 +17,7 @@
         #endregion
 
         #region Constructor
-        public FileSystemAction(JobResult jobResult) : base(jobResult)
-        {
-            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
-            if (ServicePointManager.ServerCertificateValidationCallback == null)
-                ServicePointManager.ServerCertificateValidationCallback += ValidationCallback.ValidateRemoteCertificate;
-        }
+        public FileSystemAction(JobResult jobResult) : base(jobResult) { }
         #endregion
 
         #region Private Methods
