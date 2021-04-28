@@ -1,4 +1,4 @@
-﻿namespace Ser.Distribute.Actions
+﻿namespace Ser.Distribute.Model.Actions
 {
     #region Usings
     using Ser.Api;
@@ -8,7 +8,6 @@
     using System.Linq;
     using FluentFTP;
     using NLog;
-    using Ser.Distribute.Settings;
     #endregion
 
     public class FtpAction : BaseAction

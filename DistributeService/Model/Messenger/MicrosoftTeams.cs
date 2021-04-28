@@ -1,4 +1,4 @@
-﻿namespace Ser.Distribute.Messenger
+﻿namespace Ser.Distribute.Model.Messenger
 {
     #region Usings
     using System;
@@ -7,40 +7,44 @@
     using System.Text;
     using Newtonsoft.Json.Linq;
     using Ser.Api;
-    using Ser.Distribute.Settings;
     #endregion
 
-    public class Slack : BaseMessenger
+    public class MicrosoftTeams : BaseMessenger
     {
-        public Slack(MessengerSettings settings, JobResult jobResult) : base(settings, jobResult) { }
+        #region Constructor
+        public MicrosoftTeams(MessengerSettings settings) : base(settings) { }
+        #endregion
 
+        #region Public Methods
         public override MessengerResult SendMessage(List<BaseResult> distibuteResults)
         {
             try
             {
-                var messageBuilder = new StringBuilder("Hi,");
-                if (distibuteResults.Count > 0)
+                var messageBuilder = new StringBuilder("Hi,<br/>");
+                if(distibuteResults.Count > 0)
                 {
-                    messageBuilder.AppendLine("I wanted to inform you that the reports have now been run.");
-                    messageBuilder.AppendLine("The results are as follows.");
+                    messageBuilder.AppendLine("<p>I wanted to inform you that the reports have now been run.</p>");
+                    messageBuilder.AppendLine("<p>The results are as follows.</p>");
                 }
 
                 foreach (var result in distibuteResults)
                 {
-                    var message = GetTextMessageFromResult(result);
+                    var message = GetHtmlMessageFromResult(result);
                     messageBuilder.AppendLine(message);
                 }
 
                 if (messageBuilder.Length <= 8)
                 {
-                    messageBuilder.AppendLine("I would like to inform you that you have not yet selected a delivery method.");
-                    messageBuilder.AppendLine("You can choose between Qlik hub, mail, file system and many more.");
-                    messageBuilder.AppendLine("You can find more information under the following link.");
-                    messageBuilder.AppendLine("https://docs.analyticsgate.com/how-to/change-or-edit-the-reporting-json-script");
+                    messageBuilder.AppendLine("<p>I would like to inform you that you have not yet selected a delivery method.</p>");
+                    messageBuilder.AppendLine("<p>You can choose between Qlik hub, mail, file system and many more.</p>");
+                    messageBuilder.AppendLine("<p>You can find more information under the following link.</p>");
+                    messageBuilder.AppendLine("<p><a href=\"https://docs.analyticsgate.com/how-to/change-or-edit-the-reporting-json-script\">Overview</a></p>");
                 }
 
                 var responseJson = JObject.FromObject(new
                 {
+                    contentType = "html",
+                    title = "AG Reporting Results",
                     text = messageBuilder.ToString().Trim()
                 });
 
@@ -51,10 +55,10 @@
                     return new MessengerResult()
                     {
                         Message = "Message was successfully transferred to Microsoft Teams.",
-                        ReportName = "Slack",
+                        ReportName = "Microsoft Teams",
                         ReportState = GetFormatedState(),
                         Success = true,
-                        TaskName = JobResult.TaskName
+                        TaskName = Settings.JobResult.TaskName
                     };
                 }
 
@@ -66,10 +70,11 @@
                 {
                     Message = ex.Message,
                     Success = false,
-                    TaskName = JobResult.TaskName,
+                    TaskName = Settings.JobResult.TaskName,
                     ReportState = "ERROR"
                 };
             }
         }
+        #endregion
     }
 }

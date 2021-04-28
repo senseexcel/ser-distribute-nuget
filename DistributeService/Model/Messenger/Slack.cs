@@ -1,4 +1,4 @@
-﻿namespace Ser.Distribute.Messenger
+﻿namespace Ser.Distribute.Model.Messenger
 {
     #region Usings
     using System;
@@ -6,13 +6,11 @@
     using System.Net.Http;
     using System.Text;
     using Newtonsoft.Json.Linq;
-    using Ser.Api;
-    using Ser.Distribute.Settings;
     #endregion
 
     public class Slack : BaseMessenger
     {
-        public Slack(MessengerSettings settings, JobResult jobResult) : base(settings, jobResult) { }
+        public Slack(MessengerSettings settings) : base(settings) { }
 
         public override MessengerResult SendMessage(List<BaseResult> distibuteResults)
         {
@@ -54,7 +52,7 @@
                         ReportName = "Slack",
                         ReportState = GetFormatedState(),
                         Success = true,
-                        TaskName = JobResult.TaskName
+                        TaskName = Settings.JobResult.TaskName
                     };
                 }
 
@@ -66,7 +64,7 @@
                 {
                     Message = ex.Message,
                     Success = false,
-                    TaskName = JobResult.TaskName,
+                    TaskName = Settings.JobResult.TaskName,
                     ReportState = "ERROR"
                 };
             }

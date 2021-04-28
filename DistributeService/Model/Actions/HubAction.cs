@@ -1,4 +1,4 @@
-﻿namespace Ser.Distribute.Actions
+﻿namespace Ser.Distribute.Model.Actions
 {
     #region Usings
     using System;
@@ -13,17 +13,12 @@
     using Q2g.HelperQlik;
     using Q2g.HelperQrs;
     using Ser.Api;
-    using Ser.Distribute.Settings;
     #endregion
 
     public class HubAction : BaseAction
     {
         #region Constructor
         public HubAction(JobResult jobResult) : base(jobResult) { }
-        #endregion
-
-        #region Properties
-        private static QlikQrsHub QrsHub { get; set; }
         #endregion
 
         #region Private Methods
@@ -57,28 +52,15 @@
             return null;
         }
 
-        private static QlikQrsHub GetQrsApiConnection(Connection socketConnection)
+        private static void DeleteReportsFromHub(Report report, HubSettings settings)
         {
             try
             {
-                if (QrsHub != null)
-                    return QrsHub;
-                var hubUri = Connection.BuildQrsUri(socketConnection?.ConnectUri ?? null, socketConnection?.Config?.ServerUri ?? null);
-                QrsHub = new QlikQrsHub(hubUri, socketConnection.ConnectCookie);
-                return QrsHub;
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("No connection to the QRS API could be established.", ex);
-            }
-        }
+                var reportOwner = settings?.SessionUser?.ToString() ?? null;
+                if (settings.Owner != null)
+                    reportOwner = settings.Owner;
 
-        private static void DeleteReportsFromHub(Report report, HubSettings settings, Connection socketConnection)
-        {
-            try
-            {
-                var reportOwner = settings.Owner;
-                var qrsApi = GetQrsApiConnection(socketConnection);
+                var qrsApi = settings.GetQrsApiConnection();
                 var sharedContentInfos = qrsApi.GetSharedContentAsync(new HubSelectRequest())?.Result;
                 if (sharedContentInfos == null)
                     logger.Debug("No shared content found.");
@@ -112,19 +94,19 @@
         }
         #endregion
 
-        public void UploadToHub(Report report, HubSettings settings, Connection socketConnection)
+        public void UploadToHub(Report report, HubSettings settings)
         {
             var reportName = report?.Name ?? null;
 
             if (String.IsNullOrEmpty(reportName))
                 throw new Exception("The report filename is empty.");
 
-            if (String.IsNullOrEmpty(settings.Owner))
-                throw new Exception("No owner for shared content found.");
+            if (settings?.SessionUser == null)
+                throw new Exception("The session user is empty.");
 
             //Delete reports from hub before uploaded!
             if (settings.Mode == DistributeMode.DELETEALLFIRST)
-                DeleteReportsFromHub(report, settings, socketConnection);
+                DeleteReportsFromHub(report, settings);
 
             foreach (var reportPath in report.Paths)
             {
@@ -147,22 +129,24 @@
 
                         HubInfo hubInfo = null;
                         Guid? hubUserId = null;
-
-                        var qrsApi = GetQrsApiConnection(socketConnection);
-                        logger.Debug($"Use the following Qlik user '{settings.Owner}'...");
-                        var hubUser = new DomainUser(settings.Owner);
-                        var filter = $"userId eq '{hubUser.UserId}' and userDirectory eq '{hubUser.UserDirectory}'";
-                        var result = qrsApi.SendRequestAsync("user", HttpMethod.Get, null, filter).Result;
-                        logger.Debug($"QRS Result for user: '{result}'");
-                        if (result == null || result == "[]")
-                            throw new Exception($"Qlik user {settings.Owner} was not found or session not connected (QRS).");
-                        var userObject = JArray.Parse(result);
-                        if (userObject.Count > 1)
-                            throw new Exception($"Too many User found. {result}");
-                        else if (userObject.Count == 1)
-                            hubUserId = new Guid(userObject.First()["id"].ToString());
-                        logger.Debug($"hubUser id is '{hubUserId}'.");
-
+                        DomainUser hubUser = settings?.SessionUser ?? null;
+                        var qrsApi = settings.GetQrsApiConnection();
+                        if (settings.Owner != null)
+                        {
+                            logger.Debug($"Use Owner '{settings.Owner}'.");
+                            hubUser = new DomainUser(settings.Owner);
+                            var filter = $"userId eq '{hubUser.UserId}' and userDirectory eq '{hubUser.UserDirectory}'";
+                            var result = qrsApi.SendRequestAsync("user", HttpMethod.Get, null, filter).Result;
+                            logger.Debug($"User result: {result}");
+                            if (result == null || result == "[]")
+                                throw new Exception($"Qlik user {settings.Owner} was not found or session not connected (QRS).");
+                            var userObject = JArray.Parse(result);
+                            if (userObject.Count > 1)
+                                throw new Exception($"Too many User found. {result}");
+                            else if (userObject.Count == 1)
+                                hubUserId = new Guid(userObject.First()["id"].ToString());
+                            logger.Debug($"hubUser id is '{hubUserId}'.");
+                        }
                         var sharedContent = GetSharedContentFromUser(contentName, hubUser, qrsApi);
                         if (sharedContent == null)
                         {
@@ -289,7 +273,7 @@
                 }
                 finally
                 {
-                    socketConnection.IsFree = true;
+                    settings.SocketConnection.IsFree = true;
                 }
             }
         }

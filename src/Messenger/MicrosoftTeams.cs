@@ -7,12 +7,13 @@
     using System.Text;
     using Newtonsoft.Json.Linq;
     using Ser.Api;
+    using Ser.Distribute.Settings;
     #endregion
 
     public class MicrosoftTeams : BaseMessenger
     {
         #region Constructor
-        public MicrosoftTeams(MessengerSettings settings) : base(settings) { }
+        public MicrosoftTeams(MessengerSettings settings, JobResult jobResult) : base(settings, jobResult) { }
         #endregion
 
         #region Public Methods
@@ -58,7 +59,7 @@
                         ReportName = "Microsoft Teams",
                         ReportState = GetFormatedState(),
                         Success = true,
-                        TaskName = Settings.JobResult.TaskName
+                        TaskName = JobResult.TaskName
                     };
                 }
 
@@ -70,7 +71,7 @@
                 {
                     Message = ex.Message,
                     Success = false,
-                    TaskName = Settings.JobResult.TaskName,
+                    TaskName = JobResult.TaskName,
                     ReportState = "ERROR"
                 };
             }

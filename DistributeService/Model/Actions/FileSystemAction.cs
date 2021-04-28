@@ -1,4 +1,4 @@
-﻿namespace Ser.Distribute.Actions
+﻿namespace Ser.Distribute.Model.Actions
 {
     #region Usings
     using Ser.Api;
@@ -8,7 +8,6 @@
     using Q2g.HelperQlik;
     using System.IO;
     using System.Net;
-    using Ser.Distribute.Settings;
     #endregion
 
     public class FileSystemAction : BaseAction
@@ -43,7 +42,7 @@
         #endregion
 
         #region Public Methods
-        public void CopyFile(Report report, FileSettings settings, Connection socketConnection)
+        public void CopyFile(Report report, FileSettings settings)
         {
             var reportName = report?.Name ?? null;
             try
@@ -92,7 +91,7 @@
                     targetPath = PathCache[target];
                 else
                 {
-                    targetPath = ResolveLibPath(target, socketConnection);
+                    targetPath = ResolveLibPath(target, settings.SocketConnection);
                     PathCache.Add(target, targetPath);
                 }
 
@@ -159,7 +158,7 @@
             finally
             {
                 PathCache.Clear();
-                socketConnection.IsFree = true;
+                settings.SocketConnection.IsFree = true;
             }
         }
         #endregion
