@@ -25,7 +25,7 @@
 
         #region Properties
         public string ErrorMessage { get; private set; }
-        public CancellationToken? Token { get; set; } = null;
+        public CancellationTokenSource TokenSource { get; set; }
         #endregion
 
         #region Private Methods
@@ -132,7 +132,7 @@
                 foreach (var jobResult in jobResults)
                 {
                     //Check Cancel
-                    Token?.ThrowIfCancellationRequested();
+                    TokenSource?.Token.ThrowIfCancellationRequested();
 
                     taskIndex++;
                     jobResult.TaskName = $"Task {taskIndex}";
@@ -198,7 +198,7 @@
                     foreach (var report in jobResult.Reports)
                     {
                         //Check Cancel
-                        Token?.ThrowIfCancellationRequested();
+                        TokenSource?.Token.ThrowIfCancellationRequested();
 
                         fileSystemAction.Results.Clear();
                         ftpAction.Results.Clear();
@@ -211,7 +211,7 @@
                         foreach (var location in locations)
                         {
                             //Check Cancel
-                            Token?.ThrowIfCancellationRequested();
+                            TokenSource?.Token.ThrowIfCancellationRequested();
 
                             var settings = GetSettings<DistributeSettings>(location, true);
                             if (settings.Active)
@@ -319,7 +319,7 @@
                 connectionManager.MakeFree();
 
                 //Check Cancel
-                Token?.ThrowIfCancellationRequested();
+                TokenSource?.Token.ThrowIfCancellationRequested();
 
                 results = results.OrderBy(r => r.TaskName).ToList();
                 results = NormalizeReportState(results);
