@@ -25,6 +25,7 @@
 
         #region Properties
         public string ErrorMessage { get; private set; }
+        public CancellationToken? Token { get; set; } = null;
         #endregion
 
         #region Private Methods
@@ -80,7 +81,7 @@
         #endregion
 
         #region Public Methods
-        public string Run(string resultFolder, CancellationToken? token = null)
+        public string Run(string resultFolder)
         {
             try
             {
@@ -110,7 +111,7 @@
                     }
                     jobResults.Add(result);
                 }
-                return Run(jobResults, token);
+                return Run(jobResults);
             }
             catch (Exception ex)
             {
@@ -119,7 +120,7 @@
             }
         }
 
-        public string Run(List<JobResult> jobResults, CancellationToken? token = null)
+        public string Run(List<JobResult> jobResults)
         {
             var results = new List<BaseResult>();
             var connectionManager = new ConnectionManager();
@@ -131,7 +132,7 @@
                 foreach (var jobResult in jobResults)
                 {
                     //Check Cancel
-                    token?.ThrowIfCancellationRequested();
+                    Token?.ThrowIfCancellationRequested();
 
                     taskIndex++;
                     jobResult.TaskName = $"Task {taskIndex}";
@@ -197,7 +198,7 @@
                     foreach (var report in jobResult.Reports)
                     {
                         //Check Cancel
-                        token?.ThrowIfCancellationRequested();
+                        Token?.ThrowIfCancellationRequested();
 
                         fileSystemAction.Results.Clear();
                         ftpAction.Results.Clear();
@@ -210,7 +211,7 @@
                         foreach (var location in locations)
                         {
                             //Check Cancel
-                            token?.ThrowIfCancellationRequested();
+                            Token?.ThrowIfCancellationRequested();
 
                             var settings = GetSettings<DistributeSettings>(location, true);
                             if (settings.Active)
@@ -318,7 +319,7 @@
                 connectionManager.MakeFree();
 
                 //Check Cancel
-                token?.ThrowIfCancellationRequested();
+                Token?.ThrowIfCancellationRequested();
 
                 results = results.OrderBy(r => r.TaskName).ToList();
                 results = NormalizeReportState(results);
