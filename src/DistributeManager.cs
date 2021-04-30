@@ -25,7 +25,6 @@
 
         #region Properties
         public string ErrorMessage { get; private set; }
-        public CancellationTokenSource TokenSource { get; set; }
         #endregion
 
         #region Private Methods
@@ -81,46 +80,7 @@
         #endregion
 
         #region Public Methods
-        public string Run(string resultFolder)
-        {
-            try
-            {
-                logger.Info("Read json result files...");
-                var jobResults = new List<JobResult>();
-                var jsonPaths = Directory.GetFiles(resultFolder, "*.json", SearchOption.TopDirectoryOnly);
-                foreach (var jsonPath in jsonPaths)
-                {
-                    if (!File.Exists(jsonPath))
-                    {
-                        logger.Error($"The json result path \"{jsonPath}\" not found.");
-                        continue;
-                    }
-                    var json = File.ReadAllText(jsonPath);
-                    var result = JsonConvert.DeserializeObject<JobResult>(json);
-                    foreach (var report in result.Reports)
-                    {
-                        foreach (var path in report.Paths)
-                        {
-                            var data = File.ReadAllBytes(path);
-                            report.Data.Add(new ReportData()
-                            {
-                                Filename = Path.GetFileName(path),
-                                DownloadData = data
-                            });
-                        }
-                    }
-                    jobResults.Add(result);
-                }
-                return Run(jobResults);
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex, "Can´t read job results from path.");
-                return null;
-            }
-        }
-
-        public string Run(List<JobResult> jobResults)
+        public string Run(List<JobResult> jobResults, CancellationToken? token = null)
         {
             var results = new List<BaseResult>();
             var connectionManager = new ConnectionManager();
@@ -132,7 +92,7 @@
                 foreach (var jobResult in jobResults)
                 {
                     //Check Cancel
-                    TokenSource?.Token.ThrowIfCancellationRequested();
+                    token?.ThrowIfCancellationRequested();
 
                     taskIndex++;
                     jobResult.TaskName = $"Task {taskIndex}";
@@ -198,7 +158,7 @@
                     foreach (var report in jobResult.Reports)
                     {
                         //Check Cancel
-                        TokenSource?.Token.ThrowIfCancellationRequested();
+                        token?.ThrowIfCancellationRequested();
 
                         fileSystemAction.Results.Clear();
                         ftpAction.Results.Clear();
@@ -211,7 +171,7 @@
                         foreach (var location in locations)
                         {
                             //Check Cancel
-                            TokenSource?.Token.ThrowIfCancellationRequested();
+                            token?.ThrowIfCancellationRequested();
 
                             var settings = GetSettings<DistributeSettings>(location, true);
                             if (settings.Active)
@@ -319,7 +279,7 @@
                 connectionManager.MakeFree();
 
                 //Check Cancel
-                TokenSource?.Token.ThrowIfCancellationRequested();
+                token?.ThrowIfCancellationRequested();
 
                 results = results.OrderBy(r => r.TaskName).ToList();
                 results = NormalizeReportState(results);
