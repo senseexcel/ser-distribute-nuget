@@ -90,7 +90,7 @@
 
                     // Upload File
                     var ftpStatus = ftpClient.UploadFile(reportPath, targetFtpFile, ftpRemoteExists);
-                    if (ftpStatus.IsSuccess())
+                    if (ftpStatus == FtpStatus.Success)
                         Results.Add(new FTPResult()
                         {
                             Success = true,
