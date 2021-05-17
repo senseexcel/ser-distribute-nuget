@@ -6,11 +6,13 @@
     using System.Net.Http;
     using System.Text;
     using Newtonsoft.Json.Linq;
+    using Ser.Api;
+    using Ser.Distribute.Settings;
     #endregion
 
     public class Slack : BaseMessenger
     {
-        public Slack(MessengerSettings settings) : base(settings) { }
+        public Slack(MessengerSettings settings, JobResult jobResult) : base(settings, jobResult) { }
 
         public override MessengerResult SendMessage(List<BaseResult> distibuteResults)
         {
@@ -52,7 +54,7 @@
                         ReportName = "Slack",
                         ReportState = GetFormatedState(),
                         Success = true,
-                        TaskName = Settings.JobResult.TaskName
+                        TaskName = JobResult.TaskName
                     };
                 }
 
@@ -64,7 +66,7 @@
                 {
                     Message = ex.Message,
                     Success = false,
-                    TaskName = Settings.JobResult.TaskName,
+                    TaskName = JobResult.TaskName,
                     ReportState = "ERROR"
                 };
             }

@@ -8,6 +8,7 @@
     using Q2g.HelperQlik;
     using System.IO;
     using System.Net;
+    using Ser.Distribute.Settings;
     #endregion
 
     public class FileSystemAction : BaseAction
@@ -42,7 +43,7 @@
         #endregion
 
         #region Public Methods
-        public void CopyFile(Report report, FileSettings settings)
+        public void CopyFile(Report report, FileSettings settings, Connection socketConnection)
         {
             var reportName = report?.Name ?? null;
             try
@@ -91,7 +92,7 @@
                     targetPath = PathCache[target];
                 else
                 {
-                    targetPath = ResolveLibPath(target, settings.SocketConnection);
+                    targetPath = ResolveLibPath(target, socketConnection);
                     PathCache.Add(target, targetPath);
                 }
 
@@ -158,7 +159,7 @@
             finally
             {
                 PathCache.Clear();
-                settings.SocketConnection.IsFree = true;
+                socketConnection.IsFree = true;
             }
         }
         #endregion

@@ -8,6 +8,7 @@
     using System.Linq;
     using FluentFTP;
     using NLog;
+    using Ser.Distribute.Settings;
     #endregion
 
     public class FtpAction : BaseAction
@@ -89,7 +90,7 @@
 
                     // Upload File
                     var ftpStatus = ftpClient.UploadFile(reportPath, targetFtpFile, ftpRemoteExists);
-                    if (ftpStatus.IsSuccess())
+                    if (ftpStatus == FtpStatus.Success)
                         Results.Add(new FTPResult()
                         {
                             Success = true,
