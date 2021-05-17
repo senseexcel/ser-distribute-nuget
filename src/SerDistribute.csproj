@@ -6,72 +6,45 @@
     <Company>akquinet finance &amp; controlling GmbH</Company>
     <Copyright>Copyright (c) $([System.DateTime]::Today.ToString('yyyy'))</Copyright>
     <RootNamespace>Ser.Distribute</RootNamespace>
-    <Version>$(GitVersion_NuGetVersion)</Version>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
     <PackageId>Ser.Distribute</PackageId>
-    <ApplicationIcon />
-    <StartupObject />
+    <AssemblyVersion>5.2.0.0</AssemblyVersion>
+    <FileVersion>5.2.0.0</FileVersion>
   </PropertyGroup>
 
-  <Choose>
-    <When Condition="'$(Configuration)' == 'Release'">
-      <ItemGroup>
-        <Reference Include="Q2gHelperQrs">
-          <HintPath>..\..\q2g-helper-qrs\src\bin\Release\$(TargetFramework)\Q2gHelperQrs.dll</HintPath>
-        </Reference>
-        <Reference Include="Ser.Api">
-          <HintPath>..\..\ser-api\src\bin\Release\$(TargetFramework)\SerApi.dll</HintPath>
-        </Reference>
-        <Reference Include="Q2gHelperPem">
-          <HintPath>..\..\q2g-helper-pem\src\bin\Release\$(TargetFramework)\Q2gHelperPem.dll</HintPath>
-        </Reference>
-        <Reference Include="Q2g.HelperQlik">
-          <HintPath>..\..\q2g-helper-qlik\src\bin\Release\$(TargetFramework)\Q2gHelperQlik.dll</HintPath>
-        </Reference>
-        <Reference Include="enigma.net">
-          <HintPath>..\..\..\QlikAPIs\enigma.net\src\bin\Release\$(TargetFramework)\enigma.net.dll</HintPath>
-        </Reference>
-        <Reference Include="qlik-engineapi">
-          <HintPath>..\..\..\QlikAPIs\qlik-engineapi\src\qlik-engineapi\bin\Release\$(TargetFramework)\qlik-engineapi.dll</HintPath>
-        </Reference>
-      </ItemGroup>
-    </When>
-    <Otherwise>
-      <ItemGroup>
-        <Reference Include="Q2gHelperQrs">
-          <HintPath>..\..\q2g-helper-qrs\src\bin\Debug\$(TargetFramework)\Q2gHelperQrs.dll</HintPath>
-        </Reference>
-        <Reference Include="Ser.Api">
-          <HintPath>..\..\ser-api\src\bin\Debug\$(TargetFramework)\SerApi.dll</HintPath>
-        </Reference>
-        <Reference Include="Q2gHelperPem">
-          <HintPath>..\..\q2g-helper-pem\src\bin\Debug\$(TargetFramework)\Q2gHelperPem.dll</HintPath>
-        </Reference>
-        <Reference Include="Q2g.HelperQlik">
-          <HintPath>..\..\q2g-helper-qlik\src\bin\Debug\$(TargetFramework)\Q2gHelperQlik.dll</HintPath>
-        </Reference>
-        <Reference Include="enigma.net">
-          <HintPath>..\..\..\QlikAPIs\enigma.net\src\bin\Debug\$(TargetFramework)\enigma.net.dll</HintPath>
-        </Reference>
-        <Reference Include="qlik-engineapi">
-          <HintPath>..\..\..\QlikAPIs\qlik-engineapi\src\qlik-engineapi\bin\Debug\$(TargetFramework)\qlik-engineapi.dll</HintPath>
-        </Reference>
-      </ItemGroup>
-    </Otherwise>
-  </Choose>
-
   <ItemGroup>
-    <PackageReference Include="FluentFTP" Version="33.0.3" />
-    <PackageReference Include="Markdig" Version="0.23.0" />
-    <PackageReference Include="Microsoft.Extensions.PlatformAbstractions" Version="1.1.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="NLog" Version="4.7.7" />
-    <PackageReference Include="GitVersionTask" Version="5.5.1" PrivateAssets="All" />
+    <Reference Include="Q2gHelperQrs">
+      <HintPath>..\..\q2g-helper-qrs\src\bin\$(Configuration)\$(TargetFramework)\Q2gHelperQrs.dll</HintPath>
+    </Reference>
+    <Reference Include="Ser.Api">
+      <HintPath>..\..\ser-api\src\bin\$(Configuration)\$(TargetFramework)\SerApi.dll</HintPath>
+    </Reference>
+    <Reference Include="Q2gHelperPem">
+      <HintPath>..\..\q2g-helper-pem\src\bin\$(Configuration)\$(TargetFramework)\Q2gHelperPem.dll</HintPath>
+    </Reference>
+    <Reference Include="Q2g.HelperQlik">
+      <HintPath>..\..\q2g-helper-qlik\src\bin\$(Configuration)\$(TargetFramework)\Q2gHelperQlik.dll</HintPath>
+    </Reference>
+    <Reference Include="enigma.net">
+      <HintPath>..\..\..\QlikAPIs\enigma.net\src\bin\$(Configuration)\$(TargetFramework)\enigma.net.dll</HintPath>
+    </Reference>
+    <Reference Include="qlik-engineapi">
+      <HintPath>..\..\..\QlikAPIs\qlik-engineapi\src\qlik-engineapi\bin\$(Configuration)\$(TargetFramework)\qlik-engineapi.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
-  <Target Name="GitVersion" BeforeTargets="AfterBuild">
-    <Message Importance="High" Text="++++++ GitVersion: $(GitVersion_InformationalVersion) ++++++" />
+  <ItemGroup>
+    <PackageReference Include="FluentFTP" Version="34.0.0" />
+    <PackageReference Include="Markdig" Version="0.24.0" />
+    <PackageReference Include="Microsoft.Extensions.PlatformAbstractions" Version="1.1.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="NLog" Version="4.7.9" />
+  </ItemGroup>
+
+  <Target Name="ShowAssemblyVersion" BeforeTargets="AfterBuild">
+    <GetAssemblyIdentity AssemblyFiles="$(TargetPath)">
+      <Output TaskParameter="Assemblies" ItemName="MyAssemblyIdentities" />
+    </GetAssemblyIdentity>
+    <Message Importance="High" Text="++++++ AssemblyVersion: %(MyAssemblyIdentities.Version) ++++++" />
   </Target>
+
 </Project>

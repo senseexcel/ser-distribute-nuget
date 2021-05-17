@@ -8,6 +8,7 @@
     using System.Linq;
     using FluentFTP;
     using NLog;
+    using Ser.Distribute.Settings;
     #endregion
 
     public class FtpAction : BaseAction
@@ -44,7 +45,7 @@
                     return;
                 }
 
-                var ftpClient = new FtpClient(settings.Host, settings.Port, settings.UserName, settings.Password);
+                var ftpClient = new FtpClient(settings.Host, settings.Port, settings.Username, settings.Password);
                 var ftpEncryptionMode = FtpEncryptionMode.None;
                 if (settings?.EncryptionMode != null)
                     ftpEncryptionMode = (FtpEncryptionMode)Enum.Parse(typeof(FtpEncryptionMode), settings.EncryptionMode);
@@ -71,7 +72,8 @@
                             break;
                         case DistributeMode.DELETEALLFIRST:
                             logger.Debug($"The FTP file '{targetFtpFile}' could not deleted.");
-                            ftpClient.DeleteFile(targetFtpFile);
+                            if (ftpClient.FileExists(targetFtpFile))
+                                ftpClient.DeleteFile(targetFtpFile);
                             ftpRemoteExists = FtpRemoteExists.Skip;
                             break;
                         case DistributeMode.OVERRIDE:
@@ -88,7 +90,7 @@
 
                     // Upload File
                     var ftpStatus = ftpClient.UploadFile(reportPath, targetFtpFile, ftpRemoteExists);
-                    if (ftpStatus.IsSuccess())
+                    if (ftpStatus == FtpStatus.Success)
                         Results.Add(new FTPResult()
                         {
                             Success = true,

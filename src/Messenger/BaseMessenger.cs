@@ -5,6 +5,7 @@
     using System.Collections.Generic;
     using System.Net.Http;
     using Ser.Api;
+    using Ser.Distribute.Settings;
     #endregion
 
     public abstract class BaseMessenger
@@ -12,12 +13,14 @@
         #region Properties
         public HttpClient Client { get; private set; }
         public MessengerSettings Settings { get; private set; }
+        public JobResult JobResult { get; private set; }
         #endregion
 
         #region Constructor
-        public BaseMessenger(MessengerSettings settings)
+        public BaseMessenger(MessengerSettings settings, JobResult jobResult)
         {
             Settings = settings;
+            JobResult = jobResult;
             Client = new HttpClient()
             {
                 BaseAddress = new Uri($"{Settings?.Url?.Scheme}://{Settings?.Url?.Host}")
@@ -37,7 +40,7 @@
         #region Protected Methods
         protected string GetFormatedState()
         {
-            return  Settings?.JobResult?.Status.ToString()?.ToUpperInvariant() ?? "Unknown state";
+            return JobResult?.Status.ToString()?.ToUpperInvariant() ?? "Unknown state";
         }
 
         protected static string GetTextMessageFromResult(BaseResult distibuteResult)
@@ -84,7 +87,7 @@
                     var hubResult = CastResult<HubResult>(distibuteResult);
                     return $"<p>Click on the following link <a href=\"{hubResult.FullLink}\">{hubResult.ReportName}</a> to open the report on the hub.</p>";
                 }
-                else if(distibuteResult.GetType() == typeof(FTPResult))
+                else if (distibuteResult.GetType() == typeof(FTPResult))
                 {
                     var ftpResult = CastResult<FTPResult>(distibuteResult);
                     return $"<p>Click on the following link <a href=\"{ftpResult.FtpPath}\">{ftpResult.ReportName}</a> to open the report on the ftp server.</p>";

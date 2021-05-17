@@ -5,16 +5,16 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Threading.Tasks;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using NLog;
     using Q2g.HelperQlik;
-    using System.Threading;
-    using Ser.Api;
     using Ser.Distribute.Actions;
-    using System.Text;
     using Ser.Distribute.Messenger;
+    using Ser.Api;
+    using Ser.Api.Model;
+    using Ser.Distribute.Settings;
+    using System.Threading;
     #endregion
 
     public class DistributeManager
@@ -28,27 +28,26 @@
         #endregion
 
         #region Private Methods
-        private static T GetSettings<T>(JToken json, bool typeOnly = false) where T : DistibuteSettings, new()
+        private static T GetSettings<T>(JToken json, bool typeOnly = false) where T : DistributeSettings, new()
         {
             try
             {
                 if (typeOnly)
                 {
-                    var active = json?.Children()["active"]?.ToList()?.FirstOrDefault()?.ToObject<bool>() ?? null;
+                    var active = json?.Children()["active"]?.ToList()?.FirstOrDefault()?.ToObject<bool>() ?? false;
                     var jProperty = json as JProperty;
-                    switch (jProperty?.Name)
-                    {
-                        case "mail":
-                            return new T() { Type = SettingsType.MAIL, Active = active };
-                        case "hub":
-                            return new T() { Type = SettingsType.HUB, Active = active };
-                        case "file":
-                            return new T() { Type = SettingsType.FILE, Active = active };
-                        case "ftp":
-                            return new T() { Type = SettingsType.FTP, Active = active };
-                        case "messenger":
-                            return new T() { Type = SettingsType.MESSENGER, Active = active };
-                    }
+                    if (jProperty?.Name?.StartsWith("mail") ?? false)
+                        return new T() { Type = SettingsType.MAIL, Active = active };
+                    else if (jProperty?.Name?.StartsWith("hub") ?? false)
+                        return new T() { Type = SettingsType.HUB, Active = active };
+                    else if (jProperty?.Name?.StartsWith("file") ?? false)
+                        return new T() { Type = SettingsType.FILE, Active = active };
+                    else if (jProperty?.Name?.StartsWith("ftp") ?? false)
+                        return new T() { Type = SettingsType.FTP, Active = active };
+                    else if (jProperty?.Name?.StartsWith("messenger") ?? false)
+                        return new T() { Type = SettingsType.MESSENGER, Active = active };
+                    else
+                        return null;
                 }
 
                 return JsonConvert.DeserializeObject<T>(json.First().ToString());
@@ -78,71 +77,10 @@
             }
             return groupedResults.SelectMany(r => r).ToList();
         }
-
-        private static List<MessengerResult> SendBotMessages(List<BaseResult> distibuteResults, List<MessengerSettings> messengerList)
-        {
-            var results = new List<MessengerResult>();
-            foreach (var messenger in messengerList)
-            {
-                switch (messenger.Messenger)
-                {
-                    case MessengerType.MICROSOFTTEAMS:
-                        var msTeams = new MicrosoftTeams(messenger);
-                        results.Add(msTeams.SendMessage(distibuteResults));
-                        break;
-                    case MessengerType.SLACK:
-                        var slack = new Slack(messenger);
-                        results.Add(slack.SendMessage(distibuteResults));
-                        break;
-                    default:
-                        throw new Exception($"Unkown messenger '{messenger.Messenger}'.");
-                }
-            }
-            return results;
-        }
         #endregion
 
         #region Public Methods
-        public string Run(string resultFolder, DistibuteOptions options)
-        {
-            try
-            {
-                logger.Info("Read json result files...");
-                var jobResults = new List<JobResult>();
-                string[] jsonPaths = Directory.GetFiles(resultFolder, "*.json", SearchOption.TopDirectoryOnly);
-                foreach (var jsonPath in jsonPaths)
-                {
-                    if (!File.Exists(jsonPath))
-                    {
-                        logger.Error($"The json result path \"{jsonPath}\" not found.");
-                        continue;
-                    }
-                    var json = File.ReadAllText(jsonPath);
-                    var result = JsonConvert.DeserializeObject<JobResult>(json);
-                    foreach (var report in result.Reports)
-                    {
-                        foreach (var path in report.Paths)
-                        {
-                            var data = File.ReadAllBytes(path);
-                            report.Data.Add(new ReportData()
-                            {
-                                Filename = Path.GetFileName(path),
-                                DownloadData = data
-                            });
-                        }
-                    }
-                    jobResults.Add(result);
-                }
-                return Run(jobResults, options);
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex, "Can´t read job results from path.");
-                return null;
-            }
-        }
-
-        public string Run(List<JobResult> jobResults, DistibuteOptions options)
+        public string Run(List<JobResult> jobResults, CancellationToken? token = null)
         {
             var results = new List<BaseResult>();
             var connectionManager = new ConnectionManager();
@@ -154,7 +92,7 @@
                 foreach (var jobResult in jobResults)
                 {
                     //Check Cancel
-                    options.CancelToken?.ThrowIfCancellationRequested();
+                    token?.ThrowIfCancellationRequested();
 
                     taskIndex++;
                     jobResult.TaskName = $"Task {taskIndex}";
@@ -215,12 +153,12 @@
                     var fileSystemAction = new FileSystemAction(jobResult);
                     var ftpAction = new FtpAction(jobResult);
                     var hubAction = new HubAction(jobResult);
-                    var mailAction = new MailAction(jobResult, options.PrivateKeyPath);
-                    var messengerList = new List<MessengerSettings>();
+                    var mailAction = new MailAction(jobResult);
+                    var messengerList = new List<BaseMessenger>();
                     foreach (var report in jobResult.Reports)
                     {
                         //Check Cancel
-                        options.CancelToken?.ThrowIfCancellationRequested();
+                        token?.ThrowIfCancellationRequested();
 
                         fileSystemAction.Results.Clear();
                         ftpAction.Results.Clear();
@@ -228,17 +166,15 @@
                         mailAction.Results.Clear();
 
                         var distribute = report?.Distribute ?? null;
-                        var resolver = new CryptoResolver(options.PrivateKeyPath);
-                        distribute = resolver.Resolve(distribute);
                         var locations = distribute?.Children().ToList() ?? new List<JToken>();
                         var distibuteActivationCount = 0;
                         foreach (var location in locations)
                         {
                             //Check Cancel
-                            options.CancelToken?.ThrowIfCancellationRequested();
+                            token?.ThrowIfCancellationRequested();
 
-                            var settings = GetSettings<DistibuteSettings>(location, true);
-                            if (settings.Active ?? true)
+                            var settings = GetSettings<DistributeSettings>(location, true);
+                            if (settings.Active)
                             {
                                 distibuteActivationCount++;
                                 switch (settings.Type)
@@ -246,8 +182,19 @@
                                     case SettingsType.MESSENGER:
                                         var messengerSettings = GetSettings<MessengerSettings>(location);
                                         messengerSettings.Type = SettingsType.MESSENGER;
-                                        messengerSettings.JobResult = jobResult;
-                                        messengerList.Add(messengerSettings);
+                                        switch (messengerSettings.Messenger)
+                                        {
+                                            case MessengerType.MICROSOFTTEAMS:
+                                                var msTeams = new MicrosoftTeams(messengerSettings, jobResult);
+                                                messengerList.Add(msTeams);
+                                                break;
+                                            case MessengerType.SLACK:
+                                                var slack = new Slack(messengerSettings, jobResult);
+                                                messengerList.Add(slack);
+                                                break;
+                                            default:
+                                                throw new Exception($"Unkown messenger '{messengerSettings.Messenger}'.");
+                                        }
                                         break;
                                     case SettingsType.FILE:
                                         //Copy reports
@@ -255,11 +202,10 @@
                                         var fileSettings = GetSettings<FileSettings>(location);
                                         fileSettings.Type = SettingsType.FILE;
                                         var fileConfigs = JsonConvert.DeserializeObject<List<SerConnection>>(JsonConvert.SerializeObject(fileSettings?.Connections ?? new List<SerConnection>()));
-                                        var fileConnection = connectionManager.GetConnection(fileConfigs);
+                                        var fileConnection = connectionManager.GetConnection(fileConfigs, token);
                                         if (fileConnection == null)
                                             throw new Exception("Could not create a connection to Qlik. (FILE)");
-                                        fileSettings.SocketConnection = fileConnection;
-                                        fileSystemAction.CopyFile(report, fileSettings);
+                                        fileSystemAction.CopyFile(report, fileSettings, fileConnection);
                                         results.AddRange(fileSystemAction.Results);
                                         break;
                                     case SettingsType.FTP:
@@ -277,19 +223,18 @@
                                         hubSettings.Type = SettingsType.HUB;
                                         var hubConfigs = JsonConvert.DeserializeObject<List<SerConnection>>(JsonConvert.SerializeObject(hubSettings?.Connections ?? new List<SerConnection>()));
                                         connectionManager.LoadConnections(hubConfigs, 1);
-                                        var hubConnection = connectionManager.GetConnection(hubConfigs);
+                                        var hubConnection = connectionManager.GetConnection(hubConfigs, token);
                                         if (hubConnection == null)
                                             throw new Exception("Could not create a connection to Qlik. (HUB)");
-                                        hubSettings.SocketConnection = hubConnection;
-                                        hubSettings.SessionUser = options.SessionUser;
-                                        hubAction.UploadToHub(report, hubSettings);
+                                        hubAction.UploadToHub(report, hubSettings, hubConnection);
                                         results.AddRange(hubAction.Results);
                                         break;
                                     case SettingsType.MAIL:
                                         //Cache mail infos
                                         logger.Info("Check - Cache Mail...");
                                         var mailSettings = GetSettings<MailSettings>(location);
-                                        mailAction.AddMailSettings(mailSettings, report);
+                                        mailSettings.Type = SettingsType.MAIL;
+                                        mailAction.MailSettings.Add(mailSettings);
                                         break;
                                     default:
                                         logger.Warn($"The delivery type of json {location} is unknown.");
@@ -310,7 +255,7 @@
                         }
                     }
 
-                    if (mailAction.MailSettingsList.Count > 0)
+                    if (mailAction.MailSettings.Count > 0)
                     {
                         //Send Mails
                         logger.Info("Send mails...");
@@ -322,7 +267,11 @@
                     if (messengerList.Count > 0)
                     {
                         logger.Info("Send report infos with messenger...");
-                        results.AddRange(SendBotMessages(results, messengerList));
+                        foreach (var messengner in messengerList)
+                        {
+                            logger.Debug($"Send message with '{messengner?.Settings?.Messenger}'...");
+                            results.Add(messengner.SendMessage(results));
+                        }
                     }
                 }
 
@@ -330,7 +279,7 @@
                 connectionManager.MakeFree();
 
                 //Check Cancel
-                options.CancelToken?.ThrowIfCancellationRequested();
+                token?.ThrowIfCancellationRequested();
 
                 results = results.OrderBy(r => r.TaskName).ToList();
                 results = NormalizeReportState(results);
