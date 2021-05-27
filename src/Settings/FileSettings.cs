@@ -2,11 +2,10 @@
 {
     #region Usings
     using System;
-    using System.Linq;
     using System.Collections.Generic;
     using Newtonsoft.Json;
-    using Ser.Api;
     using Ser.Api.Model;
+    using Ser.Api.JsonConverters;
     #endregion
 
     public class FileSettings : DistributeSettings
