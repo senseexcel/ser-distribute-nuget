@@ -201,10 +201,12 @@
                                         logger.Info("Check - Copy Files...");
                                         var fileSettings = GetSettings<FileSettings>(location);
                                         fileSettings.Type = SettingsType.FILE;
-                                        var fileConfigs = JsonConvert.DeserializeObject<List<SerConnection>>(JsonConvert.SerializeObject(fileSettings?.Connections ?? new List<SerConnection>()));
-                                        var fileConnection = connectionManager.GetConnection(fileConfigs, token);
-                                        if (fileConnection == null)
-                                            throw new Exception("Could not create a connection to Qlik. (FILE)");
+                                        var fileConnections = JsonConvert.DeserializeObject<List<SerConnection>>(JsonConvert.SerializeObject(fileSettings?.Connections ?? new List<SerConnection>()));
+                                        Connection fileConnection = null;
+                                        if (fileConnections.Count > 0)
+                                            fileConnection = connectionManager.GetConnection(fileConnections, token);
+                                        else
+                                            logger.Info("No Qlik connection in config found...");
                                         fileSystemAction.CopyFile(report, fileSettings, fileConnection);
                                         results.AddRange(fileSystemAction.Results);
                                         break;
