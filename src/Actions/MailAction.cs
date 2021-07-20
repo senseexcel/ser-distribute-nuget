@@ -21,7 +21,7 @@
     {
         #region Properties
         private List<MailMessage> SummarizedMails { get; set; } = new List<MailMessage>();
-        public List<MailSettings> MailSettings { get; set; } = new List<MailSettings>();
+        public List<MailCache> MailCaches { get; set; } = new List<MailCache>();
         #endregion
 
         #region Constructor
@@ -29,20 +29,6 @@
         #endregion
 
         #region Private Methods
-        private static bool IsValidMailAddress(string value)
-        {
-            try
-            {
-                var mail = new MailAddress(value);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex, $"No valid mail address: '{value}'.");
-                return false;
-            }
-        }
-
         private MailMessage GetMailFromSummarizedMailList(MailSettings settings)
         {
             foreach (var mail in SummarizedMails)
@@ -53,6 +39,18 @@
             }
             return null;
         }
+
+        private static void AddReportstoMail(MailMessage currentMail, Report currentReport)
+        {
+            foreach (var path in currentReport.Paths)
+            {
+                var reportData = currentReport.Data.FirstOrDefault(f => Path.GetFileName(path) == f.Filename);
+                if (reportData == null)
+                    throw new Exception($"No data vor path '{path}' found.");
+                logger.Debug($"Attachment report file {path}...");
+                currentMail.Attachments.Add(new Attachment(new MemoryStream(reportData.DownloadData), $"{currentReport.Name}{Path.GetExtension(reportData.Filename)}"));
+            }
+        }
         #endregion
 
         #region Public Methods
@@ -61,31 +59,31 @@
             try
             {
                 logger.Debug("Summarized mails...");
-                foreach (var mailSettings in MailSettings)
+                foreach (var mailcache in MailCaches)
                 {
-                    var summarizedMail = GetMailFromSummarizedMailList(mailSettings);
+                    var summarizedMail = GetMailFromSummarizedMailList(mailcache.Settings);
                     if (summarizedMail == null)
                     {
                         logger.Debug("Create new mail for summarized mail list...");
-                        var mailTo = mailSettings?.To?.Replace(";", ",")?.TrimEnd(',') ?? "No mail recipient was specified.";
-                        var mailFrom = mailSettings?.MailServer?.From ?? "No sender was specified.";
+                        var mailTo = mailcache.Settings?.To?.Replace(";", ",")?.TrimEnd(',') ?? "No mail recipient was specified.";
+                        var mailFrom = mailcache.Settings?.MailServer?.From ?? "No sender was specified.";
                         summarizedMail = new MailMessage(mailFrom, mailTo)
                         {
                             BodyEncoding = Encoding.UTF8,
                             SubjectEncoding = Encoding.UTF8,
-                            Subject = mailSettings?.Subject?.Trim() ?? "No subject was specified.",
+                            Subject = mailcache.Settings?.Subject?.Trim() ?? "No subject was specified.",
                         };
 
-                        var bccAddresses = mailSettings?.Bcc?.Replace(";", ",")?.TrimEnd(',');
+                        var bccAddresses = mailcache.Settings?.Bcc?.Replace(";", ",")?.TrimEnd(',');
                         if (!String.IsNullOrEmpty(bccAddresses))
                             summarizedMail.Bcc.Add(bccAddresses);
 
-                        var ccAddresses = mailSettings?.Cc?.Replace(";", ",")?.TrimEnd(',');
+                        var ccAddresses = mailcache.Settings?.Cc?.Replace(";", ",")?.TrimEnd(',');
                         if (!String.IsNullOrEmpty(ccAddresses))
                             summarizedMail.Bcc.Add(ccAddresses);
 
-                        var msgBody = mailSettings?.Message?.Trim() ?? String.Empty;
-                        switch (mailSettings?.MailType ?? EMailType.TEXT)
+                        var msgBody = mailcache.Settings?.Message?.Trim() ?? String.Empty;
+                        switch (mailcache.Settings?.MailType ?? EMailType.TEXT)
                         {
                             case EMailType.TEXT:
                                 msgBody = msgBody.Replace("{n}", Environment.NewLine);
@@ -98,24 +96,14 @@
                                 msgBody = Markdown.ToHtml(msgBody);
                                 break;
                             default:
-                                throw new Exception($"Unknown mail type {mailSettings?.MailType}.");
+                                throw new Exception($"Unknown mail type {mailcache.Settings?.MailType}.");
                         }
                         msgBody = msgBody.Trim();
                         logger.Debug($"Set mail body '{msgBody}'...");
                         summarizedMail.Body = msgBody;
+                        logger.Debug($"Attachment report files...");
+                        AddReportstoMail(summarizedMail, mailcache.Report);
                         SummarizedMails.Add(summarizedMail);
-
-                        foreach (var report in JobResult.Reports)
-                        {
-                            foreach (var path in report.Paths)
-                            {
-                                var reportData = report.Data.FirstOrDefault(f => Path.GetFileName(path) == f.Filename);
-                                if (reportData == null)
-                                    throw new Exception($"No data vor path '{path}' found.");
-                                logger.Debug($"Attachment file {path}...");
-                                summarizedMail.Attachments.Add(new Attachment(new MemoryStream(reportData.DownloadData), $"{report.Name}{Path.GetExtension(reportData.Filename)}"));
-                            }
-                        }
                     }
                     else
                     {
@@ -123,8 +111,8 @@
                     }
                 }
 
-                var mailServers = MailSettings.Select(s => s.MailServer).GroupBy(s => s.Host).Select(s => s.First()).ToList();
-                logger.Debug($"Send {SummarizedMails.Count} Mails over {MailSettings.Count} mail servers...");
+                var mailServers = MailCaches.Select(c => c.Settings).Select(s => s.MailServer).GroupBy(s => s.Host).Select(s => s.First()).ToList();
+                logger.Debug($"Send {SummarizedMails.Count} Mails over {MailCaches.Count} mail servers...");
                 foreach (var mailServer in mailServers)
                 {
                     var mailResult = new MailResult();

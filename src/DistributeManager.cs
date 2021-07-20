@@ -236,7 +236,7 @@
                                         logger.Info("Check - Cache Mail...");
                                         var mailSettings = GetSettings<MailSettings>(location);
                                         mailSettings.Type = SettingsType.MAIL;
-                                        mailAction.MailSettings.Add(mailSettings);
+                                        mailAction.MailCaches.Add(new MailCache() { Settings = mailSettings, Report = report });
                                         break;
                                     default:
                                         logger.Warn($"The delivery type of json {location} is unknown.");
@@ -257,7 +257,7 @@
                         }
                     }
 
-                    if (mailAction.MailSettings.Count > 0)
+                    if (mailAction.MailCaches.Count > 0)
                     {
                         //Send Mails
                         logger.Info("Send mails...");
