@@ -108,6 +108,7 @@
                     else
                     {
                         logger.Debug("Duplicate Mail settings was found in summarized mail list...");
+                        AddReportstoMail(summarizedMail, mailcache.Report);
                     }
                 }
 
