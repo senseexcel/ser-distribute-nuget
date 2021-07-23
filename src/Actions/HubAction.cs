@@ -29,6 +29,9 @@
         #region Private Methods
         private static string GetContentName(string reportName, ReportData fileData)
         {
+            if(fileData == null || fileData.DownloadData.Length == 0)
+                logger.Error("The file data was empty.");
+
             return $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(fileData.Filename).TrimStart('.').ToUpperInvariant()})";
         }
 

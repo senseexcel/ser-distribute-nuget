@@ -3,9 +3,8 @@
     #region Usings
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using Newtonsoft.Json;
-    using Ser.Api;
+    using Ser.Api.JsonConverters;
     using Ser.Api.Model;
     #endregion
 

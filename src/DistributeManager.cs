@@ -201,10 +201,12 @@
                                         logger.Info("Check - Copy Files...");
                                         var fileSettings = GetSettings<FileSettings>(location);
                                         fileSettings.Type = SettingsType.FILE;
-                                        var fileConfigs = JsonConvert.DeserializeObject<List<SerConnection>>(JsonConvert.SerializeObject(fileSettings?.Connections ?? new List<SerConnection>()));
-                                        var fileConnection = connectionManager.GetConnection(fileConfigs, token);
-                                        if (fileConnection == null)
-                                            throw new Exception("Could not create a connection to Qlik. (FILE)");
+                                        var fileConnections = JsonConvert.DeserializeObject<List<SerConnection>>(JsonConvert.SerializeObject(fileSettings?.Connections ?? new List<SerConnection>()));
+                                        Connection fileConnection = null;
+                                        if (fileConnections.Count > 0)
+                                            fileConnection = connectionManager.GetConnection(fileConnections, token);
+                                        else
+                                            logger.Info("No Qlik connection in config found...");
                                         fileSystemAction.CopyFile(report, fileSettings, fileConnection);
                                         results.AddRange(fileSystemAction.Results);
                                         break;
@@ -234,7 +236,7 @@
                                         logger.Info("Check - Cache Mail...");
                                         var mailSettings = GetSettings<MailSettings>(location);
                                         mailSettings.Type = SettingsType.MAIL;
-                                        mailAction.MailSettings.Add(mailSettings);
+                                        mailAction.MailCaches.Add(new MailCache() { Settings = mailSettings, Report = report });
                                         break;
                                     default:
                                         logger.Warn($"The delivery type of json {location} is unknown.");
@@ -255,7 +257,7 @@
                         }
                     }
 
-                    if (mailAction.MailSettings.Count > 0)
+                    if (mailAction.MailCaches.Count > 0)
                     {
                         //Send Mails
                         logger.Info("Send mails...");

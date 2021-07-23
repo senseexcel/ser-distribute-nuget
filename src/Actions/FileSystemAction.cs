@@ -24,21 +24,35 @@
         #region Private Methods
         private static string ResolveLibPath(string path, Connection socketConnection)
         {
-            logger.Debug($"Resolve data connection from path '{path}'...");
-            var pathSegments = path.Split('/');
-            var connectionName = pathSegments?.ElementAtOrDefault(2) ?? null;
-            var connections = socketConnection?.CurrentApp?.GetConnectionsAsync().Result ?? null;
-            if (connections == null)
-                throw new Exception("No data connections receive from qlik.");
+            logger.Debug($"Resolve path '{path}'...");
+            if (path.StartsWith("lib://"))
+            {
+                logger.Debug($"Resolve data connection from path '{path}'...");
 
-            var libResult = connections.FirstOrDefault(n => n.qName == connectionName);
-            if (libResult == null)
-                throw new Exception($"No data connection with name '{connectionName}' found.");
+                if (socketConnection == null)
+                    throw new Exception("Could not create a connection to Qlik. (FILE)");
 
-            var libPath = libResult.qConnectionString.ToString();
-            var result = Path.Combine(libPath, String.Join('/', pathSegments, 3, pathSegments.Length - 3));
-            logger.Debug($"The resolved path is '{result}'.");
-            return result;
+                path = path.Replace("\\", "/");
+                var pathSegments = path.Split('/');
+                var connectionName = pathSegments?.ElementAtOrDefault(2) ?? null;
+                var connections = socketConnection?.CurrentApp?.GetConnectionsAsync().Result ?? null;
+                if (connections == null)
+                    throw new Exception("No data connections receive from qlik.");
+
+                var libResult = connections.FirstOrDefault(n => n.qName == connectionName);
+                if (libResult == null)
+                    throw new Exception($"No data connection with name '{connectionName}' found.");
+
+                var libPath = libResult.qConnectionString.ToString();
+                var result = Path.Combine(libPath, String.Join('/', pathSegments, 3, pathSegments.Length - 3));
+                logger.Debug($"The resolved path is '{result}'.");
+                return result;
+            }
+            else
+            {
+                logger.Debug($"No lib path '{path}'...");
+                return path;
+            }
         }
         #endregion
 
@@ -69,8 +83,7 @@
                     return;
                 }
 
-                target = target.Replace("\\", "/");
-                if (!target.ToLowerInvariant().StartsWith("lib://"))
+                if (!target.ToLowerInvariant().StartsWith("lib://") && socketConnection != null)
                 {
                     var message = $"Target value '{target}' is not a 'lib://' connection.";
                     logger.Error(message);
@@ -159,7 +172,8 @@
             finally
             {
                 PathCache.Clear();
-                socketConnection.IsFree = true;
+                if (socketConnection != null)
+                    socketConnection.IsFree = true;
             }
         }
         #endregion
