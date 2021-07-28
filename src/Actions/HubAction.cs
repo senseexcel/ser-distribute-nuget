@@ -153,7 +153,7 @@
 
                         var qrsApi = GetQrsApiConnection(socketConnection);
                         logger.Debug($"Use the following Qlik user '{settings.Owner}'...");
-                        var hubUser = new DomainUser(settings.Owner);
+                        var hubUser = new DomainUser(settings.Owner, true);
                         var filter = $"userId eq '{hubUser.UserId}' and userDirectory eq '{hubUser.UserDirectory}'";
                         var result = qrsApi.SendRequestAsync("user", HttpMethod.Get, null, filter).Result;
                         logger.Debug($"QRS Result for user: '{result}'");
