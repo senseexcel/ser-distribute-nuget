@@ -29,7 +29,7 @@
         #region Private Methods
         private static string GetContentName(string reportName, ReportData fileData)
         {
-            if(fileData == null || fileData.DownloadData.Length == 0)
+            if (fileData == null || fileData.DownloadData.Length == 0)
                 logger.Error("The file data was empty.");
 
             return $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(fileData.Filename).TrimStart('.').ToUpperInvariant()})";
@@ -65,7 +65,11 @@
             try
             {
                 if (QrsHub != null)
-                    return QrsHub;
+                {
+                    var result = QrsHub.SendRequestAsync("about", HttpMethod.Get).Result;
+                    if (!String.IsNullOrEmpty(result))
+                        return QrsHub;
+                }
                 var hubUri = Connection.BuildQrsUri(socketConnection?.ConnectUri ?? null, socketConnection?.Config?.ServerUri ?? null);
                 QrsHub = new QlikQrsHub(hubUri, socketConnection.ConnectCookie);
                 return QrsHub;
