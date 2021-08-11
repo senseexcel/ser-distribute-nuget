@@ -74,13 +74,13 @@
                             Subject = mailcache.Settings?.Subject?.Trim() ?? "No subject was specified.",
                         };
 
+                        var ccAddresses = mailcache.Settings?.Cc?.Replace(";", ",")?.TrimEnd(',');
+                        if (!String.IsNullOrEmpty(ccAddresses))
+                            summarizedMail.CC.Add(ccAddresses);
+
                         var bccAddresses = mailcache.Settings?.Bcc?.Replace(";", ",")?.TrimEnd(',');
                         if (!String.IsNullOrEmpty(bccAddresses))
                             summarizedMail.Bcc.Add(bccAddresses);
-
-                        var ccAddresses = mailcache.Settings?.Cc?.Replace(";", ",")?.TrimEnd(',');
-                        if (!String.IsNullOrEmpty(ccAddresses))
-                            summarizedMail.Bcc.Add(ccAddresses);
 
                         var msgBody = mailcache.Settings?.Message?.Trim() ?? String.Empty;
                         switch (mailcache.Settings?.MailType ?? EMailType.TEXT)
