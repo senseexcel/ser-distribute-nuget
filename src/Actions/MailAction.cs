@@ -101,14 +101,29 @@
                         msgBody = msgBody.Trim();
                         logger.Debug($"Set mail body '{msgBody}'...");
                         summarizedMail.Body = msgBody;
-                        logger.Debug($"Attachment report files...");
-                        AddReportstoMail(summarizedMail, mailcache.Report);
-                        SummarizedMails.Add(summarizedMail);
+                        if (mailcache.Settings.SendAttachment)
+                        {
+                            logger.Debug($"Attachment report files...");
+                            AddReportstoMail(summarizedMail, mailcache.Report);
+                            SummarizedMails.Add(summarizedMail);
+                        }
+                        else
+                        {
+                            logger.Debug($"Use no mail attachment...");
+                        }
                     }
                     else
                     {
                         logger.Debug("Duplicate Mail settings was found in summarized mail list...");
-                        AddReportstoMail(summarizedMail, mailcache.Report);
+                        if (mailcache.Settings.SendAttachment)
+                        {
+                            logger.Debug($"Attachment report files...");
+                            AddReportstoMail(summarizedMail, mailcache.Report);
+                        }
+                        else
+                        {
+                            logger.Debug($"Use no mail attachment...");
+                        }
                     }
                 }
 
