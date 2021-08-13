@@ -105,12 +105,12 @@
                         {
                             logger.Debug($"Attachment report files...");
                             AddReportstoMail(summarizedMail, mailcache.Report);
-                            SummarizedMails.Add(summarizedMail);
                         }
                         else
                         {
                             logger.Debug($"Use no mail attachment...");
                         }
+                        SummarizedMails.Add(summarizedMail);
                     }
                     else
                     {
