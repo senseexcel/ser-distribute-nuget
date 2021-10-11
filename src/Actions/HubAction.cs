@@ -64,12 +64,6 @@
         {
             try
             {
-                if (QrsHub != null)
-                {
-                    var result = QrsHub.SendRequestAsync("about", HttpMethod.Get).Result;
-                    if (!String.IsNullOrEmpty(result))
-                        return QrsHub;
-                }
                 var hubUri = Connection.BuildQrsUri(socketConnection?.ConnectUri ?? null, socketConnection?.Config?.ServerUri ?? null);
                 QrsHub = new QlikQrsHub(hubUri, socketConnection.ConnectCookie);
                 return QrsHub;
