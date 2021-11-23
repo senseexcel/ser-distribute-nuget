@@ -74,13 +74,13 @@
                             Subject = mailcache.Settings?.Subject?.Trim() ?? "No subject was specified.",
                         };
 
+                        var ccAddresses = mailcache.Settings?.Cc?.Replace(";", ",")?.TrimEnd(',');
+                        if (!String.IsNullOrEmpty(ccAddresses))
+                            summarizedMail.CC.Add(ccAddresses);
+
                         var bccAddresses = mailcache.Settings?.Bcc?.Replace(";", ",")?.TrimEnd(',');
                         if (!String.IsNullOrEmpty(bccAddresses))
                             summarizedMail.Bcc.Add(bccAddresses);
-
-                        var ccAddresses = mailcache.Settings?.Cc?.Replace(";", ",")?.TrimEnd(',');
-                        if (!String.IsNullOrEmpty(ccAddresses))
-                            summarizedMail.Bcc.Add(ccAddresses);
 
                         var msgBody = mailcache.Settings?.Message?.Trim() ?? String.Empty;
                         switch (mailcache.Settings?.MailType ?? EMailType.TEXT)
@@ -101,14 +101,29 @@
                         msgBody = msgBody.Trim();
                         logger.Debug($"Set mail body '{msgBody}'...");
                         summarizedMail.Body = msgBody;
-                        logger.Debug($"Attachment report files...");
-                        AddReportstoMail(summarizedMail, mailcache.Report);
+                        if (mailcache.Settings.SendAttachment)
+                        {
+                            logger.Debug($"Attachment report files...");
+                            AddReportstoMail(summarizedMail, mailcache.Report);
+                        }
+                        else
+                        {
+                            logger.Debug($"Use no mail attachment...");
+                        }
                         SummarizedMails.Add(summarizedMail);
                     }
                     else
                     {
                         logger.Debug("Duplicate Mail settings was found in summarized mail list...");
-                        AddReportstoMail(summarizedMail, mailcache.Report);
+                        if (mailcache.Settings.SendAttachment)
+                        {
+                            logger.Debug($"Attachment report files...");
+                            AddReportstoMail(summarizedMail, mailcache.Report);
+                        }
+                        else
+                        {
+                            logger.Debug($"Use no mail attachment...");
+                        }
                     }
                 }
 

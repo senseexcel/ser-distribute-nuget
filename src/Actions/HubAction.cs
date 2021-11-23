@@ -29,7 +29,7 @@
         #region Private Methods
         private static string GetContentName(string reportName, ReportData fileData)
         {
-            if(fileData == null || fileData.DownloadData.Length == 0)
+            if (fileData == null || fileData.DownloadData.Length == 0)
                 logger.Error("The file data was empty.");
 
             return $"{Path.GetFileNameWithoutExtension(reportName)} ({Path.GetExtension(fileData.Filename).TrimStart('.').ToUpperInvariant()})";
@@ -64,8 +64,6 @@
         {
             try
             {
-                if (QrsHub != null)
-                    return QrsHub;
                 var hubUri = Connection.BuildQrsUri(socketConnection?.ConnectUri ?? null, socketConnection?.Config?.ServerUri ?? null);
                 QrsHub = new QlikQrsHub(hubUri, socketConnection.ConnectCookie);
                 return QrsHub;
@@ -153,12 +151,15 @@
 
                         var qrsApi = GetQrsApiConnection(socketConnection);
                         logger.Debug($"Use the following Qlik user '{settings.Owner}'...");
-                        var hubUser = new DomainUser(settings.Owner);
+                        var hubUser = new DomainUser(settings.Owner, true);
                         var filter = $"userId eq '{hubUser.UserId}' and userDirectory eq '{hubUser.UserDirectory}'";
+                        logger.Debug($"Use Filter '{filter}'...");
                         var result = qrsApi.SendRequestAsync("user", HttpMethod.Get, null, filter).Result;
                         logger.Debug($"QRS Result for user: '{result}'");
                         if (result == null || result == "[]")
+                        {
                             throw new Exception($"Qlik user {settings.Owner} was not found or session not connected (QRS).");
+                        }
                         var userObject = JArray.Parse(result);
                         if (userObject.Count > 1)
                             throw new Exception($"Too many User found. {result}");
