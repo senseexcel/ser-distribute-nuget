@@ -7,8 +7,8 @@
     <Copyright>Copyright (c) $([System.DateTime]::Today.ToString('yyyy'))</Copyright>
     <RootNamespace>Ser.Distribute</RootNamespace>
     <PackageId>Ser.Distribute</PackageId>
-    <AssemblyVersion>5.1.8.0</AssemblyVersion>
-    <FileVersion>5.1.8.0</FileVersion>
+    <AssemblyVersion>5.2.1.0</AssemblyVersion>
+    <FileVersion>5.2.1.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,19 +25,19 @@
       <HintPath>..\..\q2g-helper-qlik\src\bin\$(Configuration)\$(TargetFramework)\Q2gHelperQlik.dll</HintPath>
     </Reference>
     <Reference Include="enigma.net">
-      <HintPath>..\..\..\QlikAPIs\enigma.net\src\bin\$(Configuration)\$(TargetFramework)\enigma.net.dll</HintPath>
+      <HintPath>..\..\..\..\QlikAPIs\enigma.net\src\bin\$(Configuration)\$(TargetFramework)\enigma.net.dll</HintPath>
     </Reference>
     <Reference Include="qlik-engineapi">
-      <HintPath>..\..\..\QlikAPIs\qlik-engineapi\src\qlik-engineapi\bin\$(Configuration)\$(TargetFramework)\qlik-engineapi.dll</HintPath>
+      <HintPath>..\..\..\..\QlikAPIs\qlik-engineapi\src\qlik-engineapi\bin\$(Configuration)\$(TargetFramework)\qlik-engineapi.dll</HintPath>
     </Reference>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FluentFTP" Version="35.0.5" />
-    <PackageReference Include="Markdig" Version="0.26.0" />
+    <PackageReference Include="FluentFTP" Version="36.1.0" />
+    <PackageReference Include="Markdig" Version="0.27.0" />
     <PackageReference Include="Microsoft.Extensions.PlatformAbstractions" Version="1.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="NLog" Version="4.7.12" />
+    <PackageReference Include="NLog" Version="4.7.13" />
   </ItemGroup>
 
   <Target Name="ShowAssemblyVersion" BeforeTargets="AfterBuild">
