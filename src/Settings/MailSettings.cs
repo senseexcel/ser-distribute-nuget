@@ -2,12 +2,10 @@
 { 
     #region Usings
     using System;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Net.Mail;
-    using System.Text.Json.Serialization;
-    using Newtonsoft.Json.Linq;
-    using Ser.Api;
+    using System.ComponentModel;
+    using AgApi;
+    using Newtonsoft.Json.Converters;
+    using Newtonsoft.Json;
     #endregion
 
     #region Enumerations
@@ -43,6 +41,9 @@
     public class MailServerSettings
     {
         #region Properties
+        [JsonProperty, JsonConverter(typeof(StringEnumConverter))]
+        [DefaultValue(EncryptionType.RSA256)]
+        public EncryptionType EncryptType { get; set; }
         public string Host { get; set; }
         public string From { get; set; }
         public int Port { get; set; } = 25;

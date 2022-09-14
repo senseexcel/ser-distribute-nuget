@@ -15,6 +15,7 @@
     using Ser.Distribute.Settings;
     using Q2g.HelperPem;
     using Q2g.HelperQlik;
+    using AgApi;
     #endregion
 
     public class MailAction : BaseAction
@@ -148,9 +149,21 @@
                                 var password = mailServer.Password;
                                 if (mailServer.UseBase64Password && File.Exists(priateKeyPath))
                                 {
-                                    logger.Debug($"Use private key path {priateKeyPath}...");
-                                    var textCrypter = new TextCrypter(priateKeyPath);
-                                    password = textCrypter.DecryptText(password);
+                                    logger.Debug($"Use private key path '{priateKeyPath}' for encryption '{mailServer.EncryptType}' ...");
+                                    if (mailServer.EncryptType == EncryptionType.RSA256)
+                                    {
+                                        var textCrypter = new TextCrypter(priateKeyPath);
+                                        password = textCrypter.DecryptText(password);
+                                    }
+                                    else if (mailServer.EncryptType == EncryptionType.AES256)
+                                    {
+                                        var aesCrypter = new AesCrypter(priateKeyPath);
+                                        password = aesCrypter.DecryptText(password);
+                                    }
+                                    else
+                                    {
+                                        throw new Exception($"Unknown encryption type '{mailServer.EncryptType}'.");
+                                    }
                                 }
                                 client.Credentials = new NetworkCredential(mailServer.Username, password);
                             }

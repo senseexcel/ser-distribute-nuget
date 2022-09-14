@@ -25,10 +25,10 @@
       <HintPath>..\..\q2g-helper-qlik\src\bin\$(Configuration)\$(TargetFramework)\Q2gHelperQlik.dll</HintPath>
     </Reference>
     <Reference Include="enigma.net">
-      <HintPath>..\..\..\..\QlikAPIs\enigma.net\src\bin\$(Configuration)\$(TargetFramework)\enigma.net.dll</HintPath>
+      <HintPath>..\..\..\..\..\QlikAPIs\00_Temp\enigma.net\src\bin\$(Configuration)\$(TargetFramework)\enigma.net.dll</HintPath>
     </Reference>
     <Reference Include="qlik-engineapi">
-      <HintPath>..\..\..\..\QlikAPIs\qlik-engineapi\src\qlik-engineapi\bin\$(Configuration)\$(TargetFramework)\qlik-engineapi.dll</HintPath>
+      <HintPath>..\..\..\..\..\QlikAPIs\00_Temp\qlik-engineapi\src\qlik-engineapi\bin\$(Configuration)\$(TargetFramework)\qlik-engineapi.dll</HintPath>
     </Reference>
   </ItemGroup>
 
