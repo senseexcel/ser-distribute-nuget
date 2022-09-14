@@ -9,6 +9,9 @@
     using FluentFTP;
     using NLog;
     using Ser.Distribute.Settings;
+    using Q2g.HelperQlik;
+    using AgApi;
+    using Q2g.HelperPem;
     #endregion
 
     public class FtpAction : BaseAction
@@ -45,7 +48,32 @@
                     return;
                 }
 
-                var ftpClient = new FtpClient(settings.Host, settings.Port, settings.Username, settings.Password);
+                var priateKeyPath = HelperUtilities.GetFullPathFromApp(settings.PrivateKey);
+                if (!File.Exists(priateKeyPath))
+                    logger.Debug("No private key path found...");
+
+                logger.Debug($"Set ftp server credential for user '{settings.Username}'...");
+                var password = settings.Password;
+                if (settings.UseBase64Password)
+                {
+                    logger.Debug($"Use private key path '{priateKeyPath}' for encryption '{settings.EncryptType}' ...");
+                    if (settings.EncryptType == EncryptionType.RSA256)
+                    {
+                        var textCrypter = new TextCrypter(priateKeyPath);
+                        password = textCrypter.DecryptText(password);
+                    }
+                    else if (settings.EncryptType == EncryptionType.AES256)
+                    {
+                        var aesCrypter = new AesCrypter(priateKeyPath);
+                        password = aesCrypter.DecryptText(password);
+                    }
+                    else
+                    {
+                        throw new Exception($"Unknown encryption type '{settings.EncryptType}'.");
+                    }
+                }
+
+                var ftpClient = new FtpClient(settings.Host, settings.Port, settings.Username, password);
                 var ftpEncryptionMode = FtpEncryptionMode.None;
                 if (settings?.EncryptionMode != null)
                     ftpEncryptionMode = (FtpEncryptionMode)Enum.Parse(typeof(FtpEncryptionMode), settings.EncryptionMode);
